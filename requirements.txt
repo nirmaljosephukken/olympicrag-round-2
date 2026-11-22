@@ -1,0 +1,7 @@
+# Direct dependencies, pinned exactly (Python 3.12.10). Full transitive lock: requirements.lock
+requests==2.34.2
+numpy==2.5.5
+model2vec==0.10.0
+tigergraph-mcp==1.0.3
+mcp==1.27.0
+pytest==9.2.0

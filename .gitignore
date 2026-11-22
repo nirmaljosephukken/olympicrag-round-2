@@ -1,0 +1,9 @@
+.env
+.tg_token
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+data/corpus/
+*.log
