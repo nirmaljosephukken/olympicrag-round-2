@@ -24,7 +24,8 @@ from typing import Any
 
 from agr.config import ROOT
 from agr.embed import embed_query
-from agr.parse import norm, TITLE_RE, split_names
+from agr import crossgames
+from agr.parse import norm, TITLE_RE, split_names, source_tier, TIER_LABELS, PROVISIONAL_RE, CREW_EVENT
 from agr.tg import TG
 
 MONTHS = "january february march april may june july august september october november december".split()
@@ -397,8 +398,10 @@ class Toolbox:
 
     # ------------------------------------------------------------ source records (Round 2)
     def source_records(self, event_id: str = "", published_before: str = "") -> Observation:
-        """Source records (scoreboards, jury decisions, bulletins, blogs, emails ...) with their source and publication
-        time, oldest first: those linked to one event, or all of them (optionally published up to a UTC time)."""
+        """Source records (scoreboards, jury decisions, bulletins, blogs, emails ...) in publication-time order, each
+        with its source, publication time (local and UTC), reliability tier (1 official record, 2 operational,
+        3 news/media, 4 informal; agr.parse.source_tier) and any words marking its content as provisional: those
+        linked to one event, or all of them (optionally published up to a UTC time)."""
         t0 = time.time()
         if event_id:
             eid = self._resolve_event(event_id)
@@ -407,13 +410,140 @@ class Toolbox:
         else:
             r = self.tg.query("list_sources", {"published_before": str(published_before or "")})
             recs = [_attrs(v) for v in r[0]["records"]]
-        recs.sort(key=lambda x: x.get("published_utc") or x.get("published", ""))
-        ev = [self._ev("source", x["id"], f"source: {x['source']}; published: {x['published']}; {x['body']}",
-                       x.get("title")) for x in recs]
-        summ = f"{len(recs)} source record(s), oldest first:" + "".join(
-            f"\n[{e.id}] {x['id']} | {x['title']} | {e.text[:700]}" for e, x in zip(ev, recs))
+        recs.sort(key=lambda x: (str(x.get("published_utc") or ""), x.get("id", "")))
+        ev, lines = [], []
+        for x in recs:
+            tier = int(x.get("tier") or source_tier(x.get("source", "")))
+            prov = sorted({m.lower() for m in PROVISIONAL_RE.findall(x.get("title", "") + " " + x.get("body", ""))})
+            text = (f"source: {x['source']} (tier {tier}: {TIER_LABELS.get(tier, '')}); published: {x['published']}"
+                    f" [UTC {x.get('published_utc', '')}]" + (f"; provisional wording: {', '.join(prov)}" if prov else "")
+                    + f"; {x['body']}")
+            e = self._ev("source", x["id"], text, x.get("title"))
+            ev.append(e)
+            lines.append(f"[{e.id}] {x['id']} | {x['title']} | {text[:900]}")
+        summ = (f"{len(recs)} source record(s), in publication-time order (tier 1 = most authoritative):\n" +
+                "\n".join(lines))
         return Observation("source_records", summ, ev, bool(recs), recs, (time.time() - t0) * 1000,
                            sum(len(e.text) for e in ev) // 4)
+
+    # ------------------------------------------------------------ cross-Games (Round 2)
+    def repeat_winners(self, sport: str = "", season: str = "", medal: str = "gold", min_games: int = 2,
+                       individual_only: bool = False) -> Observation:
+        """Athletes who won the same event (same sport + event name + season) at min_games or more Games;
+        individual_only drops crew / team events (doubles, pairs, relays, team, boats ...: agr.parse.CREW_EVENT).
+        Rows come from the athlete_medal_rows query; grouping is done in code (agr.crossgames)."""
+        t0 = time.time()
+        r = self.tg.query("athlete_medal_rows", {"sport_norm": norm(sport), "season": season or "",
+                                                 "medal": (medal or "").lower()})
+        rows = [{"name": a["attributes"]["name"], "rows": a["attributes"]["rows"]} for a in r[0]["athletes"]]
+        reps = crossgames.repeat_winners(rows, int(min_games or 2))
+        if str(individual_only).lower() in ("true", "1", "yes"):
+            reps = [g for g in reps if not CREW_EVENT.search(g["event"])]
+        self.counter += 1
+        text = (f"athletes with {medal or 'a medal'} in the same event at {min_games}+ Games"
+                f"{' in ' + sport if sport else ''}{' (' + season + ')' if season else ''}: {len(reps)}. " +
+                "; ".join(f"{g['athlete']} - {g['sport']} {g['event']} ({g['season']}): "
+                          f"{', '.join(map(str, g['years']))}" for g in reps))
+        ev = Evidence(id=f"E{self.counter}", kind="aggregate",
+                      doc_id=",".join(i for g in reps for i in g["event_ids"]), title=f"repeat_winners({sport})",
+                      text=text)
+        return Observation("repeat_winners", f"[{ev.id}] {text}", [ev], bool(rows), reps, (time.time() - t0) * 1000)
+
+    def participation_by_edition(self, event: str, sport: str = "", season: str = "",
+                                 field: str = "nations") -> Observation:
+        """Nations (or competitors) at every edition of one event in the corpus, with the max and min editions.
+        `event` is the event name, e.g. "Men's hammer throw" (a full article title also works)."""
+        t0 = time.time()
+        m = TITLE_RE.match(event or "")
+        if m:
+            sport, season, event = sport or m.group("sport"), season or m.group("season"), m.group("event")
+        field = field if field in ("nations", "competitors") else "nations"
+        r = self.tg.query("event_editions", {"sport_norm": norm(sport), "event_norm": norm(event),
+                                             "season": season or ""})
+        evs = [_attrs(v) for v in r[0]["events"]]
+        sports = sorted({e["sport"] for e in evs})
+        if len(sports) > 1 and not sport:
+            names = ", ".join(sports)
+            return Observation("participation_by_edition", f"'{event}' exists in several sports ({names}): call again "
+                               f"with sport", [], False, {"sports": sports}, (time.time() - t0) * 1000)
+        p = crossgames.participation(evs, field)
+        self.counter += 1
+        table = "; ".join(f"{x['year']}: {x['value'] if x['value'] >= 0 else 'not stated'}" for x in p["rows"])
+        text = (f"{field} per edition of {sport + ' ' if sport else ''}{event}{' (' + season + ')' if season else ''}: "
+                f"{len(p['rows'])} editions in the corpus. {table}." +
+                (f" Most: {p['max']['value']} in {', '.join(map(str, p['max']['years']))}; fewest: {p['min']['value']} "
+                 f"in {', '.join(map(str, p['min']['years']))}." if p["max"] else "") +
+                (f" No count stated for: {', '.join(map(str, p['missing_years']))}." if p["missing_years"] else ""))
+        ev = Evidence(id=f"E{self.counter}", kind="aggregate", doc_id=",".join(x["event_id"] for x in p["rows"]),
+                      title=f"participation({event})", text=text)
+        return Observation("participation_by_edition", f"[{ev.id}] {text}", [ev], bool(evs), p,
+                           (time.time() - t0) * 1000)
+
+    def medal_table(self, sport: str, year: int, season: str = "", medal: str = "gold") -> Observation:
+        """Medals of one colour (or all, medal='') per nation in one sport at one Games, counted in GSQL, ranked."""
+        t0 = time.time()
+        r = self.tg.query("medal_table", {"sport_norm": norm(sport), "year": int(year), "season": season or "",
+                                          "medal": (medal or "").lower()})
+        res = r[0] if r else {}
+        rows = crossgames.medal_counts(res.get("medals_by_nation", {}) or {}, res.get("events_by_nation", {}) or {})
+        self.counter += 1
+        text = (f"{medal or 'all'} medals by nation, {sport} at the {year} {season} Olympics "
+                f"({res.get('events_found', 0)} events in the corpus): " +
+                "; ".join(f"{x['rank']}. {x['noc']} {x['medals']} ({', '.join(e.split('|')[1] for e in x['events'])})"
+                          for x in rows))
+        ev = Evidence(id=f"E{self.counter}", kind="aggregate",
+                      doc_id=",".join(sorted({e.split('|')[0] for x in rows for e in x["events"]})),
+                      title=f"medal_table({sport}, {year} {season})", text=text)
+        return Observation("medal_table", f"[{ev.id}] {text}", [ev], bool(rows), rows, (time.time() - t0) * 1000)
+
+    # ------------------------------------------------------------ films and officeholders (Round 2)
+    def film_facts(self, title: str = "", person: str = "", role: str = "", year_from: int = -1,
+                   year_to: int = -1) -> Observation:
+        """Films from their infoboxes: by title, by a credited person (role director / starring / music /
+        cinematography / producer / writer / editing, or any) and/or release-year range. Budget and gross are given
+        as written and as parsed numbers; gross / budget is computed in code when both are in the same currency."""
+        t0 = time.time()
+        r = self.tg.query("film_facts", {"title_norm": norm(title), "person_norm": norm(person),
+                                         "role": (role or "").lower(), "year_from": int(year_from or -1),
+                                         "year_to": int(year_to or -1)})
+        films = sorted((_attrs(v) for v in r[0]["films"]), key=lambda f: (f.get("year", 0), f.get("title", "")))
+        ev, lines = [], []
+        for f in films[:40]:
+            ratio = ""
+            if f.get("budget_currency") and f["budget_currency"] == f.get("gross_currency") and f["budget_low"] > 0 \
+                    and f["gross_low"] >= 0:
+                lo, hi = f["gross_low"] / f["budget_high"], f["gross_high"] / f["budget_low"]
+                ratio = f"; gross/budget = {lo:.2f}" + (f"-{hi:.2f}" if abs(hi - lo) > 0.005 else "")
+            text = (f"{f['title']} ({f.get('year')}): released {f.get('released')}; director {f.get('director')}; "
+                    f"starring {f.get('starring')}; music {f.get('music')}; budget {f.get('budget') or 'not stated'}; "
+                    f"gross {f.get('gross') or 'not stated'}{ratio}; credits: {'; '.join(sorted(f.get('credits', [])))}")
+            x = self._ev("graph", f["id"], text[:1500], f["title"])
+            ev.append(x)
+            lines.append(f"[{x.id}] {f['id']} | {text[:600]}")
+        summ = f"{len(films)} film(s)" + ("" if len(films) <= 40 else " (first 40)") + "".join("\n" + l for l in lines)
+        return Observation("film_facts", summ, ev, bool(films), films, (time.time() - t0) * 1000,
+                           sum(len(x.text) for x in ev) // 4)
+
+    def office_succession(self, name: str = "", office: str = "") -> Observation:
+        """Offices held by a person (from the officeholder infobox, one entry per office group) with term dates,
+        predecessor and successor; or every holder of an office (office='governor of maine'). prev_term / next_term
+        link to the term of the same office held by the predecessor / successor when that person has an article."""
+        t0 = time.time()
+        r = self.tg.query("office_succession", {"person_norm": norm(name),
+                                                "office_like": norm(re.sub(r"^\s*\d+(st|nd|rd|th)\s+", "", office or ""))})
+        terms = sorted((_attrs(v) for v in r[0]["terms"]), key=lambda x: (x.get("start_year", 0), x.get("id", "")))
+        ev, lines = [], []
+        for x in terms[:40]:
+            text = (f"{', '.join(x.get('holder', [])) or '?'}: {x.get('office') or 'office not named'}, "
+                    f"{x.get('term_start') or '?'} to {x.get('term_end') or 'present/not stated'}; "
+                    f"predecessor: {x.get('predecessor') or 'not stated'}; successor: {x.get('successor') or 'not stated'}"
+                    + (f"; previous term: {', '.join(x['prev_term'])}" if x.get("prev_term") else "")
+                    + (f"; next term: {', '.join(x['next_term'])}" if x.get("next_term") else ""))
+            e = self._ev("graph", x.get("doc_id", ""), text)
+            ev.append(e)
+            lines.append(f"[{e.id}] {x['id']} | {text}")
+        summ = f"{len(terms)} office term(s)" + "".join("\n" + l for l in lines)
+        return Observation("office_succession", summ, ev, bool(terms), terms, (time.time() - t0) * 1000)
 
     # ------------------------------------------------------------ text agents
     def _hits(self, r, tool: str, t0: float, max_chars: int) -> Observation:
@@ -495,5 +625,17 @@ TOOL_SPECS = {
     "athlete_medals": "(name) -> events where an athlete won gold/silver/bronze, with medal counts computed exactly",
     "source_records": "(event_id='', published_before='') -> source records (scoreboards, jury decisions, schedules, "
                       "bulletins, blogs, emails) with their source and publication time, oldest first: those about one "
-                      "event, or all of them, optionally only those published before a UTC time 'YYYY-MM-DD HH:MM:SS'",
+                      "event, or all of them, optionally only those published before a UTC time 'YYYY-MM-DD HH:MM:SS'; "
+                      "each with its reliability tier (1 official record, 2 operational, 3 news/media, 4 informal)",
+    "repeat_winners": "(sport='', season='', medal='gold', min_games=2, individual_only=false) -> every athlete who won the same event at "
+                      "min_games or more Games, with the years (complete list, computed in code)",
+    "participation_by_edition": "(event, sport='', season='', field='nations'|'competitors') -> the count at every "
+                                "edition of one event in the corpus, with the editions holding the max and min",
+    "medal_table": "(sport, year, season='', medal='gold'|'silver'|'bronze'|'') -> medals per nation in one sport at "
+                   "one Games, ranked, with the events each nation won (counted in GSQL)",
+    "film_facts": "(title='', person='', role='', year_from=-1, year_to=-1) -> films from their infoboxes: release "
+                  "date, director, cast, music, budget, gross (and gross/budget); role is director, starring, music, "
+                  "cinematography, producer, writer or editing",
+    "office_succession": "(name='', office='') -> offices a person held (term dates, predecessor, successor, linked "
+                         "previous/next terms), or every holder of an office",
 }

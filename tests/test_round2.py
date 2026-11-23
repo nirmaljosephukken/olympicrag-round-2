@@ -83,3 +83,27 @@ def test_trace_has_one_step_per_tigergraph_call(tmp_path, monkeypatch):
     assert t[1]["params"]["qv"] == "<512-d vector>"
     assert t[-1]["input_tokens"] == 100 and [s["step"] for s in t] == [1, 2, 3]
     assert len((tmp_path / "q.jsonl").read_text().splitlines()) == 2
+
+
+def test_source_tiers_from_source_line():
+    from agr.parse import source_tier
+    assert source_tier("LA28 shooting jury (signed certificate)") == 1
+    assert source_tier("World archery federation (registration database)") == 1
+    assert source_tier("Venue scoreboard operator") == 2
+    assert source_tier("LA28 competition operations (published schedule)") == 2
+    assert source_tier("Local sports bulletin") == 3
+    assert source_tier("Trackside Notes (spectator blog)") == 4
+    assert source_tier("LA28 ticketing (automated email)") == 4
+    assert source_tier("Third-party medal data feed (legacy format)") == 4
+
+
+def test_text_link_needs_sport_and_one_event_name():
+    events = [_ev("AW", "Archery", "Women's individual"), _ev("AM", "Archery", "Men's individual"),
+              _ev("EW", "Equestrian", "Women's individual")]
+    recs = [{"title": "Volunteer notebook, archery field", "body": "Women's individual: pause, approx. 14 min.",
+             "published_utc": "2028-07-27T04:55:00Z"},
+            {"title": "Registration extract", "body": "Archery. Men's individual: X. Women's individual: Y.",
+             "published_utc": "2028-07-27T04:55:00Z"},
+            {"title": "Notebook", "body": "Women's individual: pause.", "published_utc": "2028-07-27T04:55:00Z"}]
+    link_records(recs, events)
+    assert [(r["event_id"], r["link_how"]) for r in recs] == [("AW", "text"), ("", ""), ("", "")]

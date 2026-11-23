@@ -133,20 +133,96 @@ CREATE OR REPLACE QUERY event_claims(STRING eid) FOR GRAPH @GRAPH@ {
   PRINT @@supersedes AS supersedes;
 }
 
-// Round 2: source records about one event, oldest publication first
+// Round 2: source records about one event (time order and tiers are applied in code)
 CREATE OR REPLACE QUERY event_sources(STRING eid) FOR GRAPH @GRAPH@ {
   S = {Event.*};
   S = SELECT e FROM S:e WHERE e.id == eid;
   R = SELECT r FROM S:e -(ABOUT_EVENT)- SourceRecord:r;
   PRINT S[S.title AS title] AS event;
-  PRINT R[R.title AS title, R.source AS source, R.published AS published, R.body AS body] AS records;
+  PRINT R[R.title AS title, R.source AS source, R.published AS published, R.published_utc AS published_utc,
+          R.tier AS tier, R.tier_label AS tier_label, R.body AS body] AS records;
 }
 
-// Round 2: every source record (optionally only those published up to a UTC cut-off), oldest first
+// Round 2: every source record, optionally only those published up to a UTC cut-off ("YYYY-MM-DD HH:MM:SS")
 CREATE OR REPLACE QUERY list_sources(STRING published_before) FOR GRAPH @GRAPH@ {
   R = {SourceRecord.*};
   R = SELECT r FROM R:r WHERE published_before == "" OR r.published_utc <= to_datetime(published_before);
-  PRINT R[R.title AS title, R.source AS source, R.published AS published, R.body AS body] AS records;
+  PRINT R[R.title AS title, R.source AS source, R.published AS published, R.published_utc AS published_utc,
+          R.tier AS tier, R.tier_label AS tier_label, R.body AS body] AS records;
+}
+
+// Round 2 cross-Games: every medal of one colour (default gold) per athlete, optionally for one sport / season;
+// repeat winners of the same event are found in code (agr/crossgames.py)
+CREATE OR REPLACE QUERY athlete_medal_rows(STRING sport_norm, STRING season, STRING medal) FOR GRAPH @GRAPH@ {
+  ListAccum<STRING> @rows;
+  E = {Event.*};
+  E = SELECT e FROM E:e WHERE (sport_norm == "" OR e.sport_norm == sport_norm) AND (season == "" OR e.season == season);
+  A = SELECT a FROM E:e -(WON_MEDAL:w)- Athlete:a WHERE medal == "" OR w.medal == medal
+      ACCUM a.@rows += e.id + "|" + to_string(e.year) + "|" + e.season + "|" + e.sport + "|" + e.event + "|" + w.medal;
+  PRINT A[A.name AS name, A.@rows AS rows] AS athletes;
+}
+
+// Round 2 cross-Games: every edition of one event (same sport + event name) with its nations / competitors
+CREATE OR REPLACE QUERY event_editions(STRING sport_norm, STRING event_norm, STRING season) FOR GRAPH @GRAPH@ {
+  E = {Event.*};
+  E = SELECT e FROM E:e WHERE e.event_norm == event_norm AND (sport_norm == "" OR e.sport_norm == sport_norm)
+                              AND (season == "" OR e.season == season);
+  PRINT E[E.title AS title, E.sport AS sport, E.year AS year, E.season AS season, E.nations AS nations,
+          E.competitors AS competitors, E.gold AS gold] AS events;
+}
+
+// Round 2: medals per nation in one sport at one Games, counted with accumulators over MEDAL_FOR edges
+CREATE OR REPLACE QUERY medal_table(STRING sport_norm, INT year, STRING season, STRING medal) FOR GRAPH @GRAPH@ {
+  MapAccum<STRING, SumAccum<INT>> @@count;
+  MapAccum<STRING, ListAccum<STRING>> @@events;
+  SumAccum<INT> @@n_events;
+  G = {Games.*};
+  G = SELECT g FROM G:g WHERE g.year == year AND (season == "" OR g.season == season);
+  E = SELECT e FROM G:g -(IN_GAMES)- Event:e WHERE sport_norm == "" OR e.sport_norm == sport_norm
+      ACCUM @@n_events += 1;
+  N = SELECT n FROM E:e -(MEDAL_FOR:m)- Nation:n WHERE medal == "" OR m.medal == medal
+      ACCUM @@count += (n.id -> 1), @@events += (n.id -> e.id + "|" + e.event + "|" + m.medal);
+  PRINT @@n_events AS events_found, @@count AS medals_by_nation, @@events AS events_by_nation;
+}
+
+// Round 2: films by title, by a credited person (director, starring, music, ...) and/or by release year range
+CREATE OR REPLACE QUERY film_facts(STRING title_norm, STRING person_norm, STRING role, INT year_from, INT year_to)
+    FOR GRAPH @GRAPH@ {
+  SetAccum<STRING> @credits;
+  F = {Film.*};
+  IF person_norm != "" THEN
+    P = {Person.*};
+    P = SELECT p FROM P:p WHERE p.id == person_norm;
+    F = SELECT f FROM P:p -(FILM_CREDIT:c)- Film:f WHERE role == "" OR c.role == role;
+  END;
+  F = SELECT f FROM F:f
+      WHERE (title_norm == "" OR f.title_norm LIKE "%" + title_norm + "%")
+        AND (year_from <= 0 OR f.year >= year_from) AND (year_to <= 0 OR f.year <= year_to);
+  X = SELECT f FROM F:f -(FILM_CREDIT:c)- Person:p ACCUM f.@credits += c.role + ": " + p.name;
+  PRINT F[F.title AS title, F.name AS name, F.year AS year, F.released AS released, F.director AS director,
+          F.starring AS starring, F.music AS music, F.country AS country, F.runtime_min AS runtime_min,
+          F.budget AS budget, F.gross AS gross, F.budget_currency AS budget_currency, F.budget_low AS budget_low,
+          F.budget_high AS budget_high, F.gross_currency AS gross_currency, F.gross_low AS gross_low,
+          F.gross_high AS gross_high, F.gross_note AS gross_note, F.@credits AS credits] AS films;
+}
+
+// Round 2: offices held by a person (or every holder of an office), with predecessor, successor and the linked
+// previous / next terms of the same office
+CREATE OR REPLACE QUERY office_succession(STRING person_norm, STRING office_like) FOR GRAPH @GRAPH@ {
+  SetAccum<STRING> @holder, @prev_term, @next_term;
+  T = {OfficeTerm.*};
+  IF person_norm != "" THEN
+    P = {Person.*};
+    P = SELECT p FROM P:p WHERE p.id == person_norm;
+    T = SELECT t FROM P:p -(HELD)- OfficeTerm:t;
+  END;
+  T = SELECT t FROM T:t WHERE office_like == "" OR t.office_key LIKE "%" + office_like + "%";
+  H = SELECT t FROM T:t -(HELD)- Person:p ACCUM t.@holder += p.name;
+  A = SELECT t FROM T:t -(PREV_TERM>)- OfficeTerm:o ACCUM t.@prev_term += o.id;
+  B = SELECT t FROM T:t -(NEXT_TERM>)- OfficeTerm:o ACCUM t.@next_term += o.id;
+  PRINT T[T.@holder AS holder, T.office AS office, T.term_start AS term_start, T.term_end AS term_end,
+          T.start_year AS start_year, T.end_year AS end_year, T.predecessor AS predecessor, T.successor AS successor,
+          T.doc_id AS doc_id, T.@prev_term AS prev_term, T.@next_term AS next_term] AS terms;
 }
 
 INSTALL QUERY ALL

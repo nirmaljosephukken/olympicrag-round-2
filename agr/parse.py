@@ -195,30 +195,77 @@ def link_records(records: list[dict], events: list["Event"]) -> None:
     by_year: dict[int, list[Event]] = {}
     for e in events:
         by_year.setdefault(e.year, []).append(e)
+    phrase = lambda p, t: bool(p) and re.search(r"(?<![a-z0-9])" + re.escape(p) + r"(?![a-z0-9])", t) is not None
     for r in records:
-        tn = norm(r["title"])
+        tn, bn = norm(r["title"]), norm(r.get("body", ""))
+        ctx = tn + " " + bn
         ys = [int(y) for y in re.findall(r"\b(19\d\d|20\d\d)\b", r["title"])]
         if not ys and r.get("published_utc"):
             ys = [int(r["published_utc"][:4])]
-        cands = []
-        for y in ys[:1]:
-            for e in by_year.get(y, []):
-                en = norm(e.event)
-                if en and re.search(r"(?<![a-z0-9])" + re.escape(en) + r"(?![a-z0-9])", tn):
-                    cands.append(e)
-        if cands:  # keep only the longest matching event names ("men's 10 metre air rifle" over "men's 10")
-            best = max(len(norm(e.event)) for e in cands)
-            cands = [e for e in cands if len(norm(e.event)) == best]
-        if len(cands) > 1:
-            ctx = norm(r["title"] + " " + r.get("body", ""))
-            narrowed = [e for e in cands if norm(e.sport) in ctx or (e.venue and norm(e.venue) in ctx)]
-            cands = narrowed
+        pool = by_year.get(ys[0], []) if ys else []
+        # sports named anywhere in the record (the sport name or a form of it, e.g. 'archery', 'cycling')
+        mentions = lambda e: phrase(norm(e.sport), ctx) or (bool(e.venue) and phrase(norm(e.venue), ctx))
+        cands, how = [], ""
+        for where, text, need_sport in (("title", tn, False), ("text", bn, True)):
+            cands = [e for e in pool if phrase(norm(e.event), text)]
+            # a name that is part of a longer matched name ("men's 10" in "men's 10 metre air rifle") is dropped;
+            # two different names left (e.g. men's and women's individual) means the record is about both: no link
+            names = {norm(e.event) for e in cands}
+            names = {n for n in names if not any(o != n and phrase(n, o) for o in names)}
+            cands = [e for e in cands if norm(e.event) in names] if len(names) == 1 else []
+            if cands and (need_sport or len(cands) > 1):  # text matches, and shared names, need the sport or venue
+                cands = [e for e in cands if mentions(e)]
+            if len(cands) == 1:
+                how = where
+                break
         r["event_id"] = cands[0].id if len(cands) == 1 else ""
         r["event_candidates"] = len(cands)
+        r["link_how"] = how if r["event_id"] else ""
+
+
+# Reliability tiers of a source record, from its Source line (general rules, applied in this order):
+#   4 informal: blogs, fan or spectator posts, volunteer notes, tourism or third-party sites, memos, automated emails
+#   1 official record: signed / certified documents, juries, certificates, or an official body (jury, federation,
+#     inspector, director, organiser) issuing a register, registration record, notice, bulletin, decision or timing data
+#   3 news and media: news, bulletins, newsletters, headlines, roundups, aggregators, delegation statements
+#   2 operational: feeds, schedules, scoreboards, logs, desks, operations, planning and allocation documents
+# A tier says how authoritative the source is, not whether this record is current: content words such as 'draft',
+# 'provisional' or 'capture' found in the record are reported separately (provisional_terms).
+TIER_LABELS = {1: "official record", 2: "operational", 3: "news/media", 4: "informal"}
+_T4 = r"blog|fan|spectator|volunteer|tourism|third[- ]party|memo|analytics|automated|e-?mail|ticket|social media|voice note"
+_T1_ALONE = r"signed|certified|certificate|jury"
+_T1_BODY = r"jury|federation|inspector|director|chief|referee|organi[sz]ing|committee|LA\d\d|IOC|official"
+_T1_FORM = r"register|registration|notice|bulletin|decision|ruling|official|binding|audit|timing data|verification"
+_T3 = r"news|bulletin|newsletter|headline|roundup|aggregator|delegation|press|magazine|media desk"
+_T2 = r"feed|schedule|scoreboard|log\b|desk|operations|planning|allocation|timing|export|inspector|system|office"
+PROVISIONAL_RE = re.compile(r"\b(draft|provisional|preliminary|unofficial|pending|unconfirmed|capture|approx(?:imately)?"
+                            r"|estimate[sd]?|unverified)\b", re.I)
+
+
+def source_tier(source: str) -> int:
+    s = source or ""
+    has = lambda pat: re.search(pat, s, re.I) is not None
+    if has(_T4):
+        return 4
+    if has(_T1_ALONE) or (has(_T1_BODY) and has(_T1_FORM)):
+        return 1
+    if has(_T3):
+        return 3
+    if has(_T2):
+        return 2
+    return 3
+
+
+def tag_records(records: list[dict]) -> None:
+    for r in records:
+        r["tier"] = source_tier(r["source"])
+        r["tier_label"] = TIER_LABELS[r["tier"]]
+        # words that mark content as provisional or unverified, as found in the record (reported, not judged)
+        r["provisional_terms"] = sorted({m.lower() for m in PROVISIONAL_RE.findall(r["title"] + " " + r.get("body", ""))})
 
 
 def parse_corpus(path: str | Path):
-    docs, events, chunks, records = [], [], [], []
+    docs, events, chunks, records, typed = [], [], [], [], []
     with open(path, encoding="utf-8") as f:
         for line in f:
             d = json.loads(line)
@@ -229,6 +276,8 @@ def parse_corpus(path: str | Path):
                          "tokens": d.get("approx_tokens", 0), "synthetic": bool(d.get("synthetic"))})
             if hdr:
                 records.append({"id": d["doc_id"], "title": d["title"], **hdr})
+            if kind in ("film", "officeholder", "person"):
+                typed.append((d, kind, fields))
             ev = None
             oly = fields if kind == "Olympic event" else olympic_infobox(d["text"])
             if oly:
@@ -241,7 +290,9 @@ def parse_corpus(path: str | Path):
                 chunks.append({"id": f"{d['doc_id']}#{i}", "doc_id": d["doc_id"], "idx": i, "text": c})
     link_editions(events)
     link_records(records, events)
-    return docs, events, chunks, records
+    tag_records(records)
+    from agr.entities import parse_entities
+    return docs, events, chunks, records, parse_entities(typed)
 
 
 def link_editions(events: list[Event]) -> None:
@@ -311,7 +362,10 @@ if __name__ == "__main__":
     src = sys.argv[1] if len(sys.argv) > 1 else "data/corpus/corpus.jsonl"
     out = Path(sys.argv[2] if len(sys.argv) > 2 else "build")
     out.mkdir(parents=True, exist_ok=True)
-    docs, events, chunks, records = parse_corpus(src)
+    docs, events, chunks, records, ent = parse_corpus(src)
+    (out / "films.json").write_text(json.dumps(ent["films"], ensure_ascii=False), encoding="utf-8")
+    (out / "people.json").write_text(json.dumps(list(ent["people"].values()), ensure_ascii=False), encoding="utf-8")
+    (out / "terms.json").write_text(json.dumps(ent["terms"], ensure_ascii=False), encoding="utf-8")
     (out / "records.json").write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
     (out / "documents.json").write_text(json.dumps(docs, ensure_ascii=False), encoding="utf-8")
     (out / "events.json").write_text(json.dumps([{**asdict(e), "prev_id": e.prev_id, "next_id": e.next_id}
@@ -325,4 +379,10 @@ if __name__ == "__main__":
         by_games[e.games] = by_games.get(e.games, 0) + 1
     print(f"documents={len(docs)} events={len(events)} chunks={len(chunks)} events_with_edition_links={linked} "
           f"source_records={len(records)} records_linked_to_event={sum(1 for r in records if r['event_id'])}")
+    f, tm = ent["films"], ent["terms"]
+    print(f"films={len(f)} (year {sum(x['year'] > 0 for x in f)}, budget {sum(x['budget_low'] >= 0 for x in f)}, "
+          f"gross {sum(x['gross_low'] >= 0 for x in f)}) people={len(ent['people'])} "
+          f"officeholders={sum(1 for x in ent['people'].values() if x['kind'] == 'officeholder')} office_terms={len(tm)} "
+          f"(with predecessor {sum(1 for x in tm if x['predecessor'])}, successor {sum(1 for x in tm if x['successor'])}, "
+          f"linked to the successor's term {sum(1 for x in tm if x['next_id'])})")
     print("events per Games (2024+):", {k: v for k, v in sorted(by_games.items()) if int(k[:4]) >= 2024})

@@ -43,9 +43,32 @@ DROP JOB olympic_claims
 // Round 2: source records (scoreboards, jury decisions, bulletins, blogs ...) with their source and publication time
 CREATE SCHEMA_CHANGE JOB olympic_sources FOR GRAPH @GRAPH@ {
   ADD VERTEX SourceRecord (PRIMARY_ID id STRING, title STRING, source STRING, published STRING,
-                           published_utc DATETIME, body STRING) WITH primary_id_as_attribute="true";
+                           published_utc DATETIME, body STRING, tier INT, tier_label STRING)
+                           WITH primary_id_as_attribute="true";
   ADD UNDIRECTED EDGE HAS_RECORD (FROM Doc, TO SourceRecord);
-  ADD UNDIRECTED EDGE ABOUT_EVENT (FROM SourceRecord, TO Event);
+  ADD UNDIRECTED EDGE ABOUT_EVENT (FROM SourceRecord, TO Event, how STRING);
 }
 RUN SCHEMA_CHANGE JOB olympic_sources
 DROP JOB olympic_sources
+// Round 2: films and officeholders parsed from their infoboxes (agr/entities.py)
+CREATE SCHEMA_CHANGE JOB olympic_entities FOR GRAPH @GRAPH@ {
+  ADD VERTEX Film (PRIMARY_ID id STRING, title STRING, title_norm STRING, name STRING, year INT, released STRING,
+                   director STRING, starring STRING, music STRING, country STRING, language STRING, runtime_min INT,
+                   budget STRING, gross STRING, budget_currency STRING, budget_low DOUBLE, budget_high DOUBLE,
+                   gross_currency STRING, gross_low DOUBLE, gross_high DOUBLE, gross_note STRING)
+                   WITH primary_id_as_attribute="true";
+  ADD VERTEX Person (PRIMARY_ID id STRING, name STRING, doc_id STRING, kind STRING, birth_date STRING, party STRING,
+                     occupation STRING) WITH primary_id_as_attribute="true";
+  ADD VERTEX OfficeTerm (PRIMARY_ID id STRING, doc_id STRING, office STRING, office_key STRING, term_start STRING,
+                         term_end STRING, start_year INT, end_year INT, predecessor STRING, successor STRING)
+                         WITH primary_id_as_attribute="true";
+  ADD UNDIRECTED EDGE ABOUT_FILM (FROM Doc, TO Film);
+  ADD UNDIRECTED EDGE ABOUT_PERSON (FROM Doc, TO Person);
+  ADD UNDIRECTED EDGE FILM_CREDIT (FROM Film, TO Person, role STRING);
+  ADD UNDIRECTED EDGE HELD (FROM Person, TO OfficeTerm);
+  ADD UNDIRECTED EDGE PRECEDED_BY (FROM OfficeTerm, TO Person);
+  ADD UNDIRECTED EDGE SUCCEEDED_BY (FROM OfficeTerm, TO Person);
+  ADD DIRECTED EDGE NEXT_TERM (FROM OfficeTerm, TO OfficeTerm) WITH REVERSE_EDGE="PREV_TERM";
+}
+RUN SCHEMA_CHANGE JOB olympic_entities
+DROP JOB olympic_entities

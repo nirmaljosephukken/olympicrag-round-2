@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 
 from agr.config import ROOT, SETTINGS
-from agr.parse import norm, person_names
+from agr.parse import norm, person_names, split_names
 from agr.tg import TG
 
 BUILD = ROOT / "build"
@@ -43,7 +43,7 @@ def gsql_file(name: str) -> str:
 
 def create_schema(tg: TG):
     out = tg.gsql(f"SHOW GRAPH {GRAPH}")
-    if f"Graph {GRAPH}(" in out and "SourceRecord" in out:
+    if f"Graph {GRAPH}(" in out and "OfficeTerm" in out:
         log(f"graph {GRAPH} exists, schema step skipped")
         return
     if f"Graph {GRAPH}(" not in out:
@@ -210,10 +210,12 @@ def load_records(tg: TG):
         utc = r["published_utc"].replace("T", " ").rstrip("Z") if r["published_utc"] else "1970-01-01 00:00:00"
         V[r["id"]] = {"title": {"value": r["title"]}, "source": {"value": r["source"]},
                       "published": {"value": r["published"]}, "published_utc": {"value": utc},
-                      "body": {"value": r["body"]}}
+                      "body": {"value": r["body"]}, "tier": {"value": r.get("tier", 0)},
+                      "tier_label": {"value": r.get("tier_label", "")}}
         E.setdefault(r["id"], {}).setdefault("HAS_RECORD", {}).setdefault("SourceRecord", {})[r["id"]] = {}
         if r.get("event_id"):
-            R.setdefault(r["id"], {}).setdefault("ABOUT_EVENT", {}).setdefault("Event", {})[r["event_id"]] = {}
+            R.setdefault(r["id"], {}).setdefault("ABOUT_EVENT", {}).setdefault("Event", {})[r["event_id"]] = \
+                {"how": {"value": r.get("link_how", "")}}
     if V:
         tg.upsert({"SourceRecord": V})
         tg.upsert(edges={"Doc": E})
@@ -222,14 +224,84 @@ def load_records(tg: TG):
     log(f"source records {len(V)}, linked to an event {len(R)}")
 
 
+def split_people(s: str) -> list[str]:
+    """Predecessor / successor names: only clear separators (agr.parse.split_names); placeholders are dropped."""
+    return [n for n in split_names(s or "") if n.lower() not in ("none", "vacant", "position established",
+                                                                  "position abolished", "office established")]
+
+
+def entity_payload() -> tuple[dict, dict]:
+    """Film / Person / OfficeTerm vertices and their edges from build/films.json, people.json, terms.json."""
+    val = lambda d, ks: {k: {"value": d[k]} for k in ks}
+    films = json.loads((BUILD / "films.json").read_text(encoding="utf-8"))
+    people = {p["id"]: p for p in json.loads((BUILD / "people.json").read_text(encoding="utf-8"))}
+    terms = json.loads((BUILD / "terms.json").read_text(encoding="utf-8"))
+    holder_of = {p["doc_id"]: p["id"] for p in people.values()}
+    V = {"Film": {}, "Person": {}, "OfficeTerm": {}}
+    E: dict = {}
+
+    def edge(st, s, et, dt, d, attrs=None):
+        E.setdefault(st, {}).setdefault(s, {}).setdefault(et, {}).setdefault(dt, {})[d] = \
+            {k: {"value": v} for k, v in (attrs or {}).items()}
+
+    def person(name: str) -> str:
+        pid = norm(name)
+        if pid and pid not in V["Person"]:
+            p = people.get(pid, {"name": name, "doc_id": "", "kind": "mentioned", "birth_date": "", "party": "",
+                                 "occupation": ""})
+            V["Person"][pid] = val(p, ("name", "doc_id", "kind", "birth_date", "party", "occupation"))
+        return pid
+
+    for f in films:
+        V["Film"][f["id"]] = {**val(f, ("title", "name", "year", "released", "director", "starring", "music",
+                                        "country", "language", "runtime_min", "budget", "gross", "budget_currency",
+                                        "budget_low", "budget_high", "gross_currency", "gross_low", "gross_high",
+                                        "gross_note")), "title_norm": {"value": norm(f["title"])}}
+        edge("Doc", f["id"], "ABOUT_FILM", "Film", f["id"])
+        for role, names in f["credits"].items():
+            for n in names:
+                pid = person(n)
+                if pid:
+                    edge("Film", f["id"], "FILM_CREDIT", "Person", pid, {"role": role})
+    for p in people.values():
+        person(p["name"])
+        edge("Doc", p["doc_id"], "ABOUT_PERSON", "Person", p["id"])
+    for tm in terms:
+        V["OfficeTerm"][tm["id"]] = val(tm, ("doc_id", "office", "office_key", "term_start", "term_end",
+                                             "start_year", "end_year", "predecessor", "successor"))
+        if holder_of.get(tm["doc_id"]):
+            edge("Person", holder_of[tm["doc_id"]], "HELD", "OfficeTerm", tm["id"])
+        for et, names in (("PRECEDED_BY", tm["predecessor"]), ("SUCCEEDED_BY", tm["successor"])):
+            for n in split_people(names):
+                pid = person(n)
+                if pid:
+                    edge("OfficeTerm", tm["id"], et, "Person", pid)
+        if tm.get("next_id"):
+            edge("OfficeTerm", tm["id"], "NEXT_TERM", "OfficeTerm", tm["next_id"])
+    return V, E
+
+
+def load_entities(tg: TG):
+    V, E = entity_payload()
+    for vt, items in V.items():
+        for b in batched(list(items.items()), 1500):
+            tg.upsert({vt: dict(b)})
+    for st, srcs in E.items():
+        for b in batched(list(srcs.items()), 1000):
+            tg.upsert(edges={st: dict(b)})
+    log(f"films {len(V['Film'])}, people {len(V['Person'])}, office terms {len(V['OfficeTerm'])}")
+
+
 def install_queries(tg: TG):
     out = tg.gsql(gsql_file("queries.gsql"), timeout=3600)
     log(out[-1500:])
 
 
-VERTEX_TYPES = ("Doc", "Chunk", "Event", "Games", "Sport", "Venue", "Athlete", "Nation", "Claim", "SourceRecord")
+VERTEX_TYPES = ("Doc", "Chunk", "Event", "Games", "Sport", "Venue", "Athlete", "Nation", "Claim", "SourceRecord",
+                "Film", "Person", "OfficeTerm")
 EDGE_TYPES = ("HAS_CHUNK", "DESCRIBES", "IN_GAMES", "OF_SPORT", "AT_VENUE", "WON_MEDAL", "MEDAL_FOR", "NEXT_EDITION",
-              "NEXT_GAMES", "HAS_CLAIM", "SUPERSEDES", "HAS_RECORD", "ABOUT_EVENT")
+              "NEXT_GAMES", "HAS_CLAIM", "SUPERSEDES", "HAS_RECORD", "ABOUT_EVENT", "ABOUT_FILM", "ABOUT_PERSON",
+              "FILM_CREDIT", "HELD", "PRECEDED_BY", "SUCCEEDED_BY", "NEXT_TERM")
 
 
 def write_counts(tg: TG, path: Path = ROOT / "graph_counts.json") -> dict:
@@ -243,7 +315,7 @@ def write_counts(tg: TG, path: Path = ROOT / "graph_counts.json") -> dict:
     v, e = stat("vertex"), stat("edge")
     out = {"graph": tg.graph, "vertices": {k: v.get(k, 0) for k in VERTEX_TYPES},
            "edges": {k: e.get(k, 0) for k in EDGE_TYPES},
-           "edges_reverse": {k: e[k] for k in ("PREV_EDITION", "PREV_GAMES", "SUPERSEDED_BY") if k in e}}
+           "edges_reverse": {k: e[k] for k in ("PREV_EDITION", "PREV_GAMES", "SUPERSEDED_BY", "PREV_TERM") if k in e}}
     out["vertices_total"] = sum(out["vertices"].values())
     out["edges_total"] = sum(out["edges"].values())
     path.write_text(json.dumps(out, indent=2), encoding="utf-8")
@@ -261,10 +333,13 @@ if __name__ == "__main__":
         load_claims(tg)
     elif "--records-only" in sys.argv:
         load_records(tg)
+    elif "--entities-only" in sys.argv:
+        load_entities(tg)
     elif "--skip-load" not in sys.argv:
         load(tg)
         load_claims(tg)
         load_records(tg)
+        load_entities(tg)
     if "--skip-queries" not in sys.argv:
         install_queries(tg)
     write_counts(tg)

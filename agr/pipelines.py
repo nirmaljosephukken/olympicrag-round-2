@@ -338,7 +338,9 @@ Reply with JSON only:
 TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events": "graph", "event_profile": "graph",
                "edition_hop": "graph", "aggregate": "graph", "athlete_medals": "graph",
                "similarity_search": "vector", "scoped_similarity": "vector", "read_document": "document",
-               "find_documents": "document", "fact_history": "graph", "multi_hop": "graph", "source_records": "source"}
+               "find_documents": "document", "fact_history": "graph", "multi_hop": "graph", "source_records": "source",
+               "repeat_winners": "graph", "participation_by_edition": "graph", "medal_table": "graph",
+               "film_facts": "graph", "office_succession": "graph"}
 
 
 FEEDBACK = {
