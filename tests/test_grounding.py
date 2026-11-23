@@ -105,6 +105,6 @@ def test_round2_bare_count_from_a_tool():
 
 
 def test_round2_names_from_the_question_are_not_new_claims():
-    rec = ev("E10", "Coliseum scoreboard capture", "3. Aurelien Bouchardy (FRA) 9.91 (provisional)", kind="source")
-    assert check("Aurélien Bouchardy (FRA), shown at 9.91 on the provisional Coliseum screen", [rec],
-                 "Who appeared in bronze position on the Coliseum screen?").ok
+    rec = ev("E10", "Stadium scoreboard capture", "3. Jérôme Dufresnoy (BEL) 10.04 (provisional)", kind="source")
+    assert check("Jérôme Dufresnoy (BEL), shown at 10.04 on the provisional stadium screen", [rec],
+                 "Who was third on the Stadium screen?").ok

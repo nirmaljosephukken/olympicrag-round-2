@@ -36,22 +36,22 @@ def script(monkeypatch, replies):
 def test_list_answer_from_one_tool_is_answered(tb, monkeypatch):
     script(monkeypatch, [
         {"reasoning": "count by nation", "action": "medal_table",
-         "args": {"sport": "Rowing", "year": 2024, "season": "Summer", "medal": "gold"}},
-        {"action": "final_answer", "answer": "NED, with 4 golds", "status": "answered", "citations": ["E1"],
-         "explanation": "Counted rowing golds by nation."}])
-    r = pipelines.run_agentic(tb, "t1", "Which nation won the most rowing golds at the 2024 Summer Olympics?")
+         "args": {"sport": "Sailing", "year": 2008, "season": "Summer", "medal": "gold"}},
+        {"action": "final_answer", "answer": "GBR, with 4 golds", "status": "answered", "citations": ["E1"],
+         "explanation": "Counted sailing golds by nation."}])
+    r = pipelines.run_agentic(tb, "t1", "Sailing golds by nation at the 2008 Summer Olympics?")
     line = run.answer_line(r)
-    assert line["status"] == "answered" and line["answer"] == "NED, with 4 golds"
+    assert line["status"] == "answered" and line["answer"] == "GBR, with 4 golds"
     assert line["citations"] and line["input_tokens"] == 2000
     assert [s["query"] for s in line["trace"] if s["tigergraph"]] == ["medal_table"]
     assert sum(s.get("input_tokens", 0) for s in line["trace"]) == line["input_tokens"]
 
 
 def test_invented_name_is_rejected_then_withheld(tb, monkeypatch):
-    bad = {"action": "final_answer", "answer": "NED and Nobody Atall", "status": "answered", "citations": ["E1"]}
-    script(monkeypatch, [{"action": "medal_table", "args": {"sport": "Rowing", "year": 2024, "season": "Summer"}},
+    bad = {"action": "final_answer", "answer": "GBR and Nobody Atall", "status": "answered", "citations": ["E1"]}
+    script(monkeypatch, [{"action": "medal_table", "args": {"sport": "Sailing", "year": 2008, "season": "Summer"}},
                          bad, bad, bad])
-    r = pipelines.run_agentic(tb, "t2", "Which nation won the most rowing golds at the 2024 Summer Olympics?")
+    r = pipelines.run_agentic(tb, "t2", "Sailing golds by nation at the 2008 Summer Olympics?")
     assert r.status == "not_in_corpus" and r.stop_reason.startswith("withheld_after_review")
 
 

@@ -64,35 +64,35 @@ def tb(tmp_path_factory):
 
 @needs_build
 def test_repeat_winners_tool_on_corpus(tb):
-    o = tb.repeat_winners(sport="Judo")
+    o = tb.repeat_winners(sport="Sailing")
     assert o.found and o.data and all(len(set(g["years"])) >= 2 for g in o.data)
-    assert all(g["sport"] == "Judo" and g["medal"] == "gold" for g in o.data)
+    assert all(g["sport"] == "Sailing" and g["medal"] == "gold" for g in o.data)
     assert o.evidence[0].kind == "aggregate" and o.evidence[0].doc_id
 
 
 @needs_build
 def test_participation_tool_on_corpus(tb):
-    o = tb.participation_by_edition("Men's hammer throw", sport="Athletics")
+    o = tb.participation_by_edition("Men's javelin throw", sport="Athletics")
     years = [r["year"] for r in o.data["rows"]]
     assert years == sorted(years) and len(years) >= 5 and o.data["max"]["value"] >= o.data["min"]["value"]
-    assert tb.tg.calls[-1] == ("event_editions", {"sport_norm": "athletics", "event_norm": "men s hammer throw",
+    assert tb.tg.calls[-1] == ("event_editions", {"sport_norm": "athletics", "event_norm": "men s javelin throw",
                                                   "season": ""})
 
 
 @needs_build
 def test_medal_table_tool_on_corpus(tb):
-    o = tb.medal_table("Wrestling", 2024, "Summer")
-    events = [e for e in tb.tg.events if e["year"] == 2024 and e["sport"] == "Wrestling" and e["gold_noc"]]
+    o = tb.medal_table("Sailing", 2008, "Summer")
+    events = [e for e in tb.tg.events if e["year"] == 2008 and e["sport"] == "Sailing" and e["gold_noc"]]
     assert sum(r["medals"] for r in o.data) == len(events) and o.data[0]["rank"] == 1
 
 
 @needs_build
 def test_film_and_office_tools_on_corpus(tb):
-    o = tb.film_facts(person="Steven Spielberg", role="director")
-    assert o.found and all("director: Steven Spielberg" in f["credits"] for f in o.data)
+    o = tb.film_facts(person="Tony Scott", role="director")
+    assert o.found and all("director: Tony Scott" in f["credits"] for f in o.data)
     assert any("gross/budget" in e.text for e in o.evidence)
-    t = tb.office_succession(office="governor of missouri")
-    assert t.found and all("Governor of Missouri" in x["office"] for x in t.data)
+    t = tb.office_succession(office="governor of wyoming")
+    assert t.found and all("Governor of Wyoming" in x["office"] for x in t.data)
 
 
 @needs_build

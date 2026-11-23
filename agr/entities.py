@@ -76,7 +76,7 @@ ORDINAL = re.compile(r"^\s*\d+(?:st|nd|rd|th)\s+", re.I)
 
 
 def office_key(office: str) -> str:
-    """'72nd Governor of Maine' -> 'governor of maine' (the same office across holders)."""
+    """'32nd Governor of Wyoming' -> 'governor of wyoming' (the same office across holders)."""
     return norm(ORDINAL.sub("", office or ""))
 
 

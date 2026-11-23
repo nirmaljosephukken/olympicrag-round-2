@@ -335,7 +335,7 @@ so far and what is still missing. Prefer exact graph tools (cheap, precise) and 
 graph cannot answer or to verify. Pick the tool that computes what is asked, so you never count or rank yourself:
 - the same athlete winning the same event at several Games: repeat_winners (complete list, with years);
 - nations or competitors per edition of one event across Games, with the most / fewest: participation_by_edition;
-- which nation won the most medals of a colour in a sport at one Games, or every event a nation won: medal_table;
+- medals per nation in one sport at one Games (ranking nations, or listing the events a nation won): medal_table;
 - competitor counts of the events of one sport at one Games (most / fewest / over a threshold): aggregate;
 - one athlete's medals across Games: athlete_medals; films (director, cast, music, budget, gross): film_facts;
   politicians (offices, predecessor, successor): office_succession; "why" questions: read_document / similarity_search;

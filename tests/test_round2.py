@@ -38,9 +38,9 @@ def _ev(i, sport, event, year=2028, venue=""):
 
 
 def test_link_records_unique_or_nothing():
-    events = [_ev("A", "Athletics", "Men's 100 metres"), _ev("B", "Athletics", "Men's 10,000 metres"),
+    events = [_ev("A", "Athletics", "Men's 400 metres"), _ev("B", "Athletics", "Men's 10,000 metres"),
               _ev("T", "Tennis", "Men's singles"), _ev("TT", "Table tennis", "Men's singles", venue="Westside Pavilion")]
-    recs = [{"title": "LA 2028 men's 100 metres – scoreboard capture", "body": "", "published_utc": "2028-07-24T04:09:00Z"},
+    recs = [{"title": "LA 2028 men's 400 metres – scoreboard capture", "body": "", "published_utc": "2028-07-24T04:09:00Z"},
             {"title": "Schedule – men's singles", "body": "", "published_utc": "2028-07-15T23:00:00Z"},
             {"title": "Schedule – men's singles", "body": "Westside Pavilion, table 1", "published_utc": "2028-07-15T23:00:00Z"},
             {"title": "Morning headlines", "body": "", "published_utc": "2028-07-17T19:00:00Z"}]
@@ -50,15 +50,15 @@ def test_link_records_unique_or_nothing():
 
 def test_score_facts_and_status():
     s = _load("score_public")
-    q = {"status": "answered", "answer": [{"year": 2012, "gold": "Yi Siling"}, {"year": 2016, "gold": "Virginia Thrasher"}]}
-    full = s.score_one(q, {"status": "answered", "answer": "2012: Yi Siling; 2016: Virginia Thrasher"})
-    half = s.score_one(q, {"status": "answered", "answer": "2012: Yi Siling"})
+    q = {"status": "answered", "answer": [{"year": 2000, "gold": "Ana Example"}, {"year": 2004, "gold": "Bea Sample"}]}
+    full = s.score_one(q, {"status": "answered", "answer": "2000: Ana Example; 2004: Bea Sample"})
+    half = s.score_one(q, {"status": "answered", "answer": "2000: Ana Example"})
     assert full["score"] == 1.0 and half["score"] == 0.5
     nic = {"status": "not_in_corpus", "answer": None}
     assert s.score_one(nic, {"status": "not_in_corpus", "answer": None})["score"] == 1.0
     assert s.score_one(nic, {"status": "answered", "answer": "Someone"})["score"] == 0.0
-    assert s.score_one({"status": "answered", "answer": {"noc": "JPN", "golds": 8}},
-                       {"status": "answered", "answer": "JPN with 8 golds"})["score"] == 1.0
+    assert s.score_one({"status": "answered", "answer": {"noc": "XYZ", "golds": 5}},
+                       {"status": "answered", "answer": "XYZ with 5 golds"})["score"] == 1.0
 
 
 def test_metrics_percentiles():

@@ -65,6 +65,32 @@ venv the results were produced with); `requirements.txt` lists the direct depend
 * **Scoring and metrics.** `scripts/score_public.py` scores the public answers fact by fact (deterministic normalised
   matching, optional LLM judge with `--judge`); `scripts/metrics.py` computes `metrics.json` exactly from the answer files.
 
+## No question-specific rules
+
+The system has no rule written for a particular question: no question ids, no answers in code, and no pattern that
+matches the wording of a question in order to pick an answer or a tool. What the code does read from a question:
+
+* **Entity linking** (`agr/tools.py: entity_linker`), before the first LLM call. It extracts the kinds of entities any
+  Olympic question can contain, with the same rules for every question:
+  - years: any four-digit number from 1900 to 2099;
+  - season: the word "summer" or "winter";
+  - sports, venues and exact event titles: names from the graph's own catalogue (built from the corpus) that occur in
+    the question text;
+  - a date phrase: the text after "on" up to "at the", a colon, a question mark or the end, so that a date can be
+    matched against the date text stored on events.
+
+  The result is passed to the orchestrator as hints; the LLM decides what to do with them.
+* **Argument grounding** (`agr/pipelines.py: ground_args`): if the LLM shortens the linked date phrase in a tool call, the
+  full phrase from the question is restored. Nothing else in the question is rewritten.
+
+Removed for Round 2: the Round 1 grounding check had a medal-role rule that looked for "gold medal" and "originally" in
+the question; it is gone. The grounding check now reads only the answer and the cited evidence (and the question only
+to accept names the question itself contains).
+
+Check: `git grep` for every 4-word phrase of both question files finds only generic wording in comments and tool
+descriptions (e.g. "who won the same", "editions in the corpus"), the Round 1 example questions on the local demo page
+(`agr/web.py`), and test fixtures. Tests use corpus facts that no public or hidden question asks about.
+
 ---
 
 ## Round 1 system (for reference)

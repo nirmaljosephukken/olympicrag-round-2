@@ -208,7 +208,7 @@ def link_records(records: list[dict], events: list["Event"]) -> None:
         cands, how = [], ""
         for where, text, need_sport in (("title", tn, False), ("text", bn, True)):
             cands = [e for e in pool if phrase(norm(e.event), text)]
-            # a name that is part of a longer matched name ("men's 10" in "men's 10 metre air rifle") is dropped;
+            # a name that is part of a longer matched name ("men's 400" in "men's 400 metre freestyle") is dropped;
             # two different names left (e.g. men's and women's individual) means the record is about both: no link
             names = {norm(e.event) for e in cands}
             names = {n for n in names if not any(o != n and phrase(n, o) for o in names)}

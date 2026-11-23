@@ -452,7 +452,7 @@ class Toolbox:
     def participation_by_edition(self, event: str, sport: str = "", season: str = "",
                                  field: str = "nations") -> Observation:
         """Nations (or competitors) at every edition of one event in the corpus, with the max and min editions.
-        `event` is the event name, e.g. "Men's hammer throw" (a full article title also works)."""
+        `event` is the event name, e.g. "Women's javelin throw" (a full article title also works)."""
         t0 = time.time()
         m = TITLE_RE.match(event or "")
         if m:
@@ -526,7 +526,7 @@ class Toolbox:
 
     def office_succession(self, name: str = "", office: str = "") -> Observation:
         """Offices held by a person (from the officeholder infobox, one entry per office group) with term dates,
-        predecessor and successor; or every holder of an office (office='governor of maine'). prev_term / next_term
+        predecessor and successor; or every holder of an office (office='governor of wyoming'). prev_term / next_term
         link to the term of the same office held by the predecessor / successor when that person has an article."""
         t0 = time.time()
         r = self.tg.query("office_succession", {"person_norm": norm(name),
