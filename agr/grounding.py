@@ -1,34 +1,34 @@
 """
-Grounding check: is an answer fully supported by ONE piece of cited evidence?
+Grounding check (Round 2): is every name and number in an answer stated in the evidence it cites?
 
-Lesson from our previous TigerGraph submission: an LLM-written explanation merged two different link mechanisms
-into one claim that the data did not support. Here the same failure would be an answer that stitches together
-facts from different events, names a silver medallist as the gold, or contains a name that no cited evidence holds.
-So the check is done in code, not by the LLM, and it is strict:
+The check is done in code, not by the LLM, before the agent may stop. Round 2 answers often combine several documents
+(a career across Games, a list of winners, a decision and the provisional record it replaced), so an answer may rest on
+several cited evidence items, but nothing in it may be invented:
 
-  1. every name / number in the answer must appear in the cited evidence (no unsupported content);
-  2. a non-numeric answer must be supported by a SINGLE evidence item, i.e. one event (no combining events);
-  3. for "who won the gold medal" questions on structured evidence, the names must sit in that event's
-     `gold:` field (no medal-role confusion).
+  1. a bare number answer must be the number stated in the right field of a cited item (a count from a count field or an
+     aggregation, never a number that only appears inside a date);
+  2. every number in a longer answer must appear in some cited item;
+  3. every name (a run of capitalised words, e.g. a person, nation, venue or event) must appear in some cited item, or in
+     the question itself (restating what was asked is not a new claim).
 
-The agent's evidence evaluator uses it before the agent may stop; the benchmark report runs the same check on
-every pipeline's answers to measure unsupported and combined answers.
+Words that open sentences or are generic ("The", "Gold", "Olympic", month names ...) are not names. Matching is
+accent-, case- and punctuation-insensitive, and team names stored run together ("Loredana DinuSimona Gherman") match.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
 
-from agr.parse import norm, TITLE_RE
+from agr.parse import norm
 
 
 @dataclass
 class Grounding:
     ok: bool
     reason: str
-    supporting: list[str] = field(default_factory=list)   # evidence ids that hold the full answer
+    supporting: list[str] = field(default_factory=list)   # evidence ids that state part of the answer
     events: list[str] = field(default_factory=list)       # distinct documents the answer draws on
-    problem: str = ""                                      # unknown | uncited | unsupported | combined | wrong_role
+    problem: str = ""                                      # unknown | uncited | unsupported
 
 
 def _squash(s: str) -> str:
@@ -55,75 +55,82 @@ def _contains(text: str, item: str) -> bool:
     return len(_squash(item)) >= 6 and _squash(item) in _squash(text)  # team names stored run together
 
 
-MEDAL_TABLE = re.compile(r"Gold:[\s|!]*Silver:[\s|!]*Bronze:[\s/]*([^|/\n]+)\|([^|/\n]+)\|([^|/\n]+)", re.I)
+GENERIC = set("""a an the it its no yes not none neither nor this that these those he she they his her their there here
+both only each all any some every either one two three four five six seven eight nine ten gold silver bronze medal medals
+medallist medalist men women mixed men's women's olympic olympics games summer winter final finals semifinal heat however
+according because after before during while although though on in at of for from by with and or but as if when where which
+who whom why how what than so then also official officially provisional unverified confirmed status answer note notes utc
+pdt pst cet est gmt corpus source sources record records event events team teams it's he's she's we i you our we're
+january february march april may june july august september october november december monday tuesday wednesday thursday
+friday saturday sunday mr mrs ms dr jr sr st""".split())
+NAME_RE = re.compile(r"[A-ZÀ-ÖØ-Þ][\w'’.\-]*(?:\s+(?:(?:de|da|del|der|di|du|van|von|la|le|bin|al|y|of|the)\s+)?"
+                     r"[A-ZÀ-ÖØ-Þ][\w'’.\-]*)*")
+NUM_RE = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?")
 
 
-def _gold_field(text: str) -> str | None:
-    """The gold medallist(s) as stated in the evidence, or None when the evidence has no medal field.
-    Handles structured facts ('gold: X; silver: Y') and article medal tables ('Gold: | Silver: | Bronze: / X | Y | Z'),
-    where the gold winner is the FIRST cell, not everything after the word 'Gold'."""
-    t = MEDAL_TABLE.search(text)
-    if t:
-        return t.group(1)
-    m = re.search(r"\bgold:\s*([^;\n|]*)", text)
-    return m.group(1) if m and m.group(1).strip() else None
+def names_in(answer: str) -> list[str]:
+    """Runs of capitalised words, minus generic words (a run made only of generic words is dropped)."""
+    out = []
+    for m in NAME_RE.finditer(answer or ""):
+        words = [w for w in m.group(0).split() if norm(w) and norm(w) not in GENERIC]
+        if words and any(re.match(r"[A-ZÀ-ÖØ-Þ]", w) for w in words):
+            out.append(" ".join(words))
+    return out
+
+
+def numbers_in(answer: str) -> list[str]:
+    return [n.rstrip(".,").replace(",", "") for n in NUM_RE.findall(answer or "")]
+
+
+def _has_number(text: str, n: str) -> bool:
+    flat = re.sub(r"(?<=\d),(?=\d{3})", "", text)
+    return re.search(r"(?<![\d.])" + re.escape(n) + r"(?![\d])(?!\.\d)", flat) is not None
 
 
 def check(answer: str, cited: list, question: str = "") -> Grounding:
     """`cited` is a list of objects/dicts with id, doc_id, title, text, kind."""
     get = lambda e, k: (e.get(k) if isinstance(e, dict) else getattr(e, k, "")) or ""
     a = (answer or "").strip()
-    if norm(a) in ("", "unknown", "none", "n a"):
+    if norm(a) in ("", "unknown", "none", "n a", "not in corpus", "not in the corpus"):
         return Grounding(False, "answer is unknown", problem="unknown")
     if not cited:
         return Grounding(False, "no evidence cited", problem="uncited")
     texts = {get(e, "id"): get(e, "title") + " | " + get(e, "text") for e in cited}
     docs = {get(e, "id"): get(e, "doc_id") for e in cited}
     kinds = {get(e, "id"): get(e, "kind") for e in cited}
+    alldocs = lambda ids: sorted({d for i in ids for d in str(docs[i]).split(",") if d})
 
-    # numbers: must equal the number stated in the right field of the cited evidence
+    # 1. a bare number must be the number stated in the right field of a cited item
     if re.fullmatch(r"\d[\d,]*", a):
         n = a.replace(",", "")
-        field_re = {"aggregate": r"(?:competitors > \d+: |(?:gold|silver|bronze) in )" + n + r"\b",
-                    "graph": r"(?:competitors|nations): " + n + r"\b"}
+        count_field = r"(?:competitors|nations): " + n + r"\b"   # structured event facts: only a count field counts
         sup = [i for i, t in texts.items()
-               if re.search(field_re.get(kinds[i], r"(?<![\d.,])" + n + r"(?![\d.,])"), t)]
-        return (Grounding(True, "number stated in cited evidence", sup, sorted({docs[i] for i in sup}))
-                if sup else Grounding(False, f"the number {a} is not stated in the cited evidence",
-                                      problem="unsupported"))
+               if (re.search(count_field, t) if kinds[i] == "graph" else _has_number(t, n))]
+        return (Grounding(True, "number stated in cited evidence", sup, alldocs(sup)) if sup else
+                Grounding(False, f"the number {a} is not stated in the cited evidence", problem="unsupported"))
 
-    # an answer that names two or more different cited events is combining them, whatever its wording
-    named = {get(e, "doc_id") for e in cited if get(e, "title") and _contains(a, get(e, "title"))}
-    if len(named) >= 2:
-        return Grounding(False, f"the answer combines {len(named)} different events; the question asks about one",
-                         events=sorted(named), problem="combined")
-
-    # whole answer (e.g. an event title) in one item
-    whole = [i for i, t in texts.items() if _contains(t, a)]
-    items = answer_items(a)
-    per_item = {it: [i for i, t in texts.items() if _contains(t, it)] for it in items}
-    missing = [it for it, sup in per_item.items() if not sup]
-    if missing and not whole:
-        return Grounding(False, f"not in the cited evidence: {', '.join(missing)}", problem="unsupported")
-    single = whole or [i for i in texts if all(i in sup for sup in per_item.values())]
-    if not single:
-        used = sorted({docs[i] for sup in per_item.values() for i in sup})
-        titles = sorted({get(e, "title") for e in cited if get(e, "id") in {i for s in per_item.values() for i in s}})
-        return Grounding(False, f"the answer combines facts from {len(titles)} different events/sources "
-                                f"({'; '.join(titles)[:300]}); the question asks about one",
-                         events=used, problem="combined")
-    # medal role on structured evidence
-    asks_original = re.search(r"\boriginal(ly)?\b|\binitially\b|\bfirst (?:awarded|declared)\b|\bstripped\b|"
-                              r"\bbefore (?:the |his |her |their )?(?:disqualif|result|change)", question, re.I)
-    if "gold medal" in question.lower() and not TITLE_RE.match(a) and not asks_original:
-        role_ok = []
-        for i in single:
-            g = _gold_field(texts[i])
-            if g is None or _contains(g, a) or all(_contains(g, it) for it in items):
-                role_ok.append(i)
-        if not role_ok:
-            return Grounding(False, "the named athlete(s) are not the gold medallist(s) in the cited evidence",
-                             problem="wrong_role")
-        single = role_ok
-    return Grounding(True, "answer fully supported by one cited evidence item", single,
-                     sorted({docs[i] for i in single}))
+    # 2-3. every number and every name must be stated somewhere in the cited evidence (or in the question)
+    missing, used = [], set()
+    for n in numbers_in(a):
+        sup = [i for i, t in texts.items() if _has_number(t, n)]
+        if sup:
+            used.update(sup)
+        elif not _has_number(question, n):
+            missing.append(n)
+    for name in names_in(a):
+        sup = [i for i, t in texts.items() if _contains(t, name)]
+        if not sup:  # a run of names ("Kim Woo-jin Brady Ellison"): accept when every word is stated
+            words = [w for w in name.split() if norm(w) not in GENERIC and len(norm(w)) > 1]
+            sup = [i for i, t in texts.items() if words and all(_contains(t, w) for w in words)]
+        if sup:
+            used.update(sup)
+        elif not _contains(question, name):
+            missing.append(name)
+    if missing:
+        return Grounding(False, f"not in the cited evidence: {', '.join(dict.fromkeys(missing))}"[:400],
+                         problem="unsupported")
+    if not used:  # nothing checkable in the answer (e.g. 'No'): it must at least rest on cited evidence
+        used = set(texts)
+    ids = [i for i in texts if i in used]
+    return Grounding(True, f"every name and number is stated in the cited evidence ({len(ids)} item(s))", ids,
+                     alldocs(ids))

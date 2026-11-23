@@ -26,8 +26,12 @@ class FakeTG:
         self.calls = []
 
     def query(self, name, params=None):
+        """Same contract as agr.tg.TG.query, including the query log / trace entry (transport 'fake')."""
+        from agr import tg
         self.calls.append((name, params))
-        return getattr(self, "q_" + name)(**(params or {}))
+        out = getattr(self, "q_" + name)(**(params or {}))
+        tg.log_call("query", name, params or {}, tg._rows(out), 1.0, "fake", tg._now_iso())
+        return out
 
     # --- cross-Games
     def q_athlete_medal_rows(self, sport_norm, season, medal):

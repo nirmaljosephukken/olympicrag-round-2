@@ -60,11 +60,14 @@ class Result:
     chunks_retrieved: int = 0
     strategy_changes: int = 0
     stop_reason: str = ""
-    grounded: bool = False      # answer fully supported by one cited evidence item (agr/grounding.py)
+    grounded: bool = False      # every name / number of the answer stated in cited evidence (agr/grounding.py)
     grounding: str = ""         # reason / problem from the grounding check
     notes: list[str] = field(default_factory=list)   # code-written notes (e.g. ambiguity), never LLM text
     reasoning_chain: list[str] = field(default_factory=list)  # multi-hop path built by code from tool results
-    trace: list[dict] = field(default_factory=list)   # Round 2 trace: one entry per TigerGraph call / LLM call / step
+    trace: list[dict] = field(default_factory=list)
+    status: str = ""            # answered | partial | not_in_corpus (decided by the agent, checked in code)
+    missing: list[str] = field(default_factory=list)   # requested parts the corpus does not contain (partial)
+    explanation: str = ""       # the agent's short account of how it reached the answer   # Round 2 trace: one entry per TigerGraph call / LLM call / step
 
     @property
     def total_tokens(self) -> int:
@@ -223,20 +226,34 @@ class Harness:
 
 
 ANSWER_RULES = """Answer rules:
-- Use ONLY the evidence given. The corpus is the source of truth, even if you remember otherwise.
-- Be concise: the answer is a name, a number, or an event title, not a sentence.
-- "Which event" questions: answer with the full article title, e.g. "Sailing at the 2000 Summer Olympics – Soling".
-- Team medallists: list all names as they appear in the evidence.
-- Answer about exactly ONE event. Never combine answers from different events. If several events match the
-  question equally well, answer for one of them only and set confidence to "low".
-- If the evidence is insufficient, answer "unknown"."""
+- Use ONLY the evidence given. The corpus is the source of truth, even if you remember otherwise. Every name and
+  number in the answer must be stated in an evidence item you cite (several items may be combined).
+- Answer exactly what is asked, completely: a list must hold every item the evidence supports and nothing else; label
+  list items with what makes them distinct (year, event, medal); a count gives the number and what was counted; a
+  "why" question gives the reason the evidence states.
+- status: "answered" when the evidence answers every part; "partial" when some requested parts are not in the corpus
+  (answer the rest and name the missing parts in "missing"); "not_in_corpus" when the corpus does not contain the
+  answer. Never invent an answer.
+Evidence policy (sources can disagree or change over time):
+- The most authoritative evidence for the time the question asks about wins: signed or official decisions, juries,
+  certificates and registers (source tier 1) outrank operational records such as scoreboards, schedules and feeds
+  (tier 2), which outrank news and newsletters (tier 3), which outrank blogs, fan posts, volunteer or spectator notes,
+  tourism sites and automated emails (tier 4).
+- A later publication does not override a signed decision, and a record that repeats older data does not supersede
+  it. For "as of" questions use what was established or effective at that time; an effective time can differ from the
+  event and publication times.
+- Registrations or entries are not starters or competitors; keep different populations apart.
+- Missing evidence is not a negative fact: no record of something means it is not established, not that it did not
+  happen. Unverified claims stay unverified.
+- Say what was provisional, superseded, disputed or never confirmed, and by which source."""
 
 
 def _answer_json(h: Harness, agent: str, question: str, context: str) -> dict:
     prompt = (f"{ANSWER_RULES}\n\nEvidence (each item has an id in brackets):\n{context}\n\n"
-              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, \"citations\": [evidence ids], "
+              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, \"status\": \"answered|partial|not_in_corpus\", "
+              f"\"missing\": [str], \"explanation\": str, \"citations\": [evidence ids], "
               f"\"confidence\": \"high|medium|low\"}}")
-    r = h.llm(agent, prompt, json_mode=True, max_out=400)
+    r = h.llm(agent, prompt, json_mode=True, max_out=900)
     j = r.json()
     h.log_llm_step(agent, "generate_answer", r)
     return j
@@ -315,7 +332,15 @@ Specialised agents you can call (one per turn):
 
 Each turn, choose the single most useful next action given the question, the linked entities, the evidence
 so far and what is still missing. Prefer exact graph tools (cheap, precise) and use text search only when the
-graph cannot answer or to verify. Counting and "highest/lowest" questions should use `aggregate`.
+graph cannot answer or to verify. Pick the tool that computes what is asked, so you never count or rank yourself:
+- the same athlete winning the same event at several Games: repeat_winners (complete list, with years);
+- nations or competitors per edition of one event across Games, with the most / fewest: participation_by_edition;
+- which nation won the most medals of a colour in a sport at one Games, or every event a nation won: medal_table;
+- competitor counts of the events of one sport at one Games (most / fewest / over a threshold): aggregate;
+- one athlete's medals across Games: athlete_medals; films (director, cast, music, budget, gross): film_facts;
+  politicians (offices, predecessor, successor): office_succession; "why" questions: read_document / similarity_search;
+- LA 2028 incidents, provisional vs official results, schedules, venues, registrations: source_records (all records
+  about an event, oldest first, each with its source tier and publication time) together with the event article.
 Questions that chain several hops ("held immediately before/after", "two Games earlier", "the event held at VENUE on
 DATE ... at the previous Games") should use multi_hop: one call resolves the start event exactly (event_id, venue + date,
 or sport + year + event) and walks the whole path, e.g. path ["prev"] for "held immediately before YEAR" or ["prev","prev"]
@@ -326,14 +351,16 @@ Facts can have several versions. If the question asks who ORIGINALLY won, who ho
 when a result changed, or if an event profile reports VERSIONS, call fact_history: it lists the official record, the
 article's statements, what supersedes what and any conflicts. Answer with the version the question asks for (by default
 the current official record); conflicts and changes are reported automatically in notes.
-Stop as soon as the evidence answers the question: action "final_answer" with the answer and the evidence ids
-that support it. Never invent facts that are not in the evidence.
+Stop as soon as the evidence answers the question: action "final_answer" with the answer, its status, the missing
+parts (if partial), a one-sentence explanation and the evidence ids that support it. Never invent facts that are not in
+the evidence. Before answering not_in_corpus, search with at least one suitable tool.
 
 {rules}
 
 Reply with JSON only:
 {{"reasoning": "<one short sentence>", "action": "<agent name or final_answer>", "args": {{...}},
-  "answer": "<only for final_answer>", "citations": ["E3", ...], "confidence": "high|medium|low"}}"""
+  "answer": "<only for final_answer>", "status": "answered|partial|not_in_corpus", "missing": ["<part>", ...],
+  "explanation": "<how the evidence answers it>", "citations": ["E3", ...], "confidence": "high|medium|low"}}"""
 
 TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events": "graph", "event_profile": "graph",
                "edition_hop": "graph", "aggregate": "graph", "athlete_medals": "graph",
@@ -344,12 +371,8 @@ TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events":
 
 
 FEEDBACK = {
-    "combined": "The question asks about ONE event, but your answer combines several. Choose the single event whose "
-                "details match the question exactly; if several match equally, answer for one of them only "
-                "(confidence low). Do not list alternatives in the answer.",
-    "wrong_role": "The named athlete is not in the gold field of the cited event. Answer with the gold medallist.",
-    "unsupported": "Part of the answer is not in the cited evidence. Answer with the name(s), number or event title "
-                   "only (no sentence), exactly as the evidence states it, or gather the missing evidence first.",
+    "unsupported": "Part of the answer is not in the cited evidence. Cite every item that states it, write names and "
+                   "numbers exactly as the evidence does, drop what no evidence states, or gather it first.",
     "uncited": "Cite the evidence ids that state the answer.",
     "unknown": "Keep investigating with a different tool or filter before giving up.",
 }
@@ -386,32 +409,28 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         r = h.llm("orchestrator", prompt, system=system, json_mode=True, max_out=500)
         d = r.json()
         action, args = d.get("action", ""), d.get("args") or {}
-        if action == "final_answer" and not d.get("answer") and isinstance(args, dict):
-            d = {**d, **{k: args[k] for k in ("answer", "citations", "confidence") if k in args}}
+        if action == "final_answer" and isinstance(args, dict):
+            d = {**{k: args[k] for k in ANSWER_KEYS if k in args}, **{k: v for k, v in d.items() if v}}
         args = ground_args(action, args, link.data)
         h.log_llm_step("orchestrator", f"decide:{action}", r, d.get("reasoning", ""), args)
         if action == "final_answer" or not action:
-            ans, cites = str(d.get("answer") or ""), [str(c) for c in (d.get("citations") or [])]
+            ans, cites, status, missing = answer_fields(d)
+            if status == "not_in_corpus":
+                if h.res.tool_calls <= 1 and remaining > 1 and rejections < max_rejections:
+                    rejections += 1   # only the entity linker ran: search before concluding
+                    history.append(f"step {len(history) + 1} evidence_evaluator: search the corpus with a suitable "
+                                   f"tool before concluding not_in_corpus (missing evidence is not a negative fact).")
+                    continue
+                h._trace(tool="evidence_evaluator", tigergraph=False, ok=True, ms=0.0)
+                return not_in_corpus(h, d, cites, "the agent found no evidence that answers the question")
             g = h.ground(ans, cites)
             h.res.steps.append(Step(len(h.res.steps) + 1, "evidence_evaluator", "check_grounding",
                                     {"answer": ans, "citations": cites}, h.res.grounding, g.ok, 0.0))
             h._trace(tool="evidence_evaluator", tigergraph=False, ok=g.ok, ms=0.0)
             if g.ok:
-                h.res.answer, h.res.confidence = ans, d.get("confidence", "")
-                h.res.citations = h.cite(cites)
-                h.res.stop_reason = "evidence_sufficient: " + g.reason
-                return h.finish()
+                return accept(h, d, ans, cites, missing, "evidence_sufficient: " + g.reason)
             if rejections >= max_rejections or remaining <= 1:
-                # never release a rejected answer: withhold it and say why, in code
-                h.res.answer, h.res.confidence, h.res.citations = "unknown", "low", []
-                h.res.grounded, h.res.grounding = False, "unknown: answer withheld after review"
-                h.res.notes.append(f"Answer withheld: the proposed answer failed the grounding check "
-                                   f"({g.reason}).")
-                for group in h.ties:
-                    h.res.notes.append("Candidates that match the question equally: " +
-                                       "; ".join(e["title"] for e in group) + ".")
-                h.res.stop_reason = f"withheld_after_review: {g.reason}"
-                return h.finish()
+                return withhold(h, g)
             rejections += 1
             history.append(f"step {len(history) + 1} evidence_evaluator REJECTED answer '{ans}': {g.reason}. "
                            f"{FEEDBACK.get(g.problem, '')}")
@@ -434,10 +453,60 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     # budget exhausted: answer from what we have
     context = "\n".join(f"[{e.id}] ({e.title}) {e.text}" for e in h.ledger.values())
     j = _answer_json(h, "answer_generator", question, context[:24000])
-    h.res.answer, h.res.confidence = str(j.get("answer", "")), j.get("confidence", "")
-    h.res.citations = h.cite(j.get("citations", []))
-    h.ground(h.res.answer, j.get("citations", []))
-    h.res.stop_reason = "step_budget_exhausted"
+    ans, cites, status, missing = answer_fields(j)
+    if status == "not_in_corpus":
+        return not_in_corpus(h, j, cites, "step budget exhausted without evidence that answers the question")
+    g = h.ground(ans, cites)
+    return accept(h, j, ans, cites, missing, "step_budget_exhausted: " + g.reason) if g.ok else withhold(h, g)
+
+
+ANSWER_KEYS = ("answer", "status", "missing", "explanation", "citations", "confidence")
+NOT_FOUND = {"", "unknown", "none", "n a", "not in corpus", "not in the corpus", "not_in_corpus", "null"}
+
+
+def answer_fields(d: dict) -> tuple[str, list[str], str, list[str]]:
+    """(answer text, citation ids, status, missing parts) from the agent's JSON, with the status checked in code:
+    an empty / 'unknown' answer is not_in_corpus; an answer with missing parts is partial; otherwise answered."""
+    ans = d.get("answer")
+    ans = json.dumps(ans, ensure_ascii=False) if isinstance(ans, (list, dict)) else str(ans or "")
+    cites = [str(c) for c in (d.get("citations") or [])] if isinstance(d.get("citations"), list) else []
+    missing = [str(m) for m in (d.get("missing") or []) if str(m).strip()] if isinstance(d.get("missing"), list) else []
+    status = str(d.get("status") or "").strip().lower()
+    if status == "not_in_corpus" or norm(ans) in NOT_FOUND:
+        return ans, cites, "not_in_corpus", missing
+    return ans, cites, "partial" if missing else "answered", missing
+
+
+def accept(h: Harness, d: dict, ans: str, cites: list[str], missing: list[str], reason: str) -> Result:
+    h.res.answer, h.res.confidence = ans, d.get("confidence", "")
+    h.res.citations = h.cite(cites)
+    h.res.status, h.res.missing = ("partial" if missing else "answered"), missing
+    h.res.explanation = str(d.get("explanation") or "")
+    h.res.stop_reason = reason
+    return h.finish()
+
+
+def not_in_corpus(h: Harness, d: dict, cites: list[str], reason: str) -> Result:
+    """The agent concluded the corpus does not answer the question. Cited items (e.g. a record that lists anonymous
+    entries) are kept as the evidence for that conclusion."""
+    h.res.answer, h.res.status, h.res.confidence = "", "not_in_corpus", d.get("confidence", "")
+    h.res.citations = h.cite(cites)
+    h.res.missing = [str(m) for m in (d.get("missing") or [])] if isinstance(d.get("missing"), list) else []
+    h.res.explanation = str(d.get("explanation") or "") or reason
+    h.res.grounded, h.res.grounding = True, "not_in_corpus: " + reason
+    h.res.stop_reason = "not_in_corpus: " + reason
+    return h.finish()
+
+
+def withhold(h: Harness, g) -> Result:
+    """Never release a rejected answer: report not_in_corpus and say why, in code."""
+    h.res.answer, h.res.status, h.res.confidence, h.res.citations = "", "not_in_corpus", "low", []
+    h.res.grounded, h.res.grounding = False, "withheld after review"
+    h.res.notes.append(f"Answer withheld: the proposed answer failed the grounding check ({g.reason}).")
+    for group in h.ties:
+        h.res.notes.append("Candidates that match the question equally: " + "; ".join(e["title"] for e in group) + ".")
+    h.res.explanation = "No answer could be grounded in the evidence found."
+    h.res.stop_reason = f"withheld_after_review: {g.reason}"
     return h.finish()
 
 

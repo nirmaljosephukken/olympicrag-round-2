@@ -51,8 +51,10 @@ needs_build = pytest.mark.skipif(not (BUILD / "films.json").exists(), reason="ru
 
 
 @pytest.fixture(scope="module")
-def tb():
+def tb(tmp_path_factory):
+    from agr import tg
     from agr.tools import Toolbox
+    tg.QUERY_LOG = tmp_path_factory.mktemp("log") / "q.jsonl"
     t = Toolbox.__new__(Toolbox)
     import json
     t.tg, t.counter = FakeTG(), 0

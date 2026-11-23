@@ -41,7 +41,8 @@ def citations_of(r) -> list[str]:
 
 
 def explanation_of(r) -> str:
-    parts = list(r.reasoning_chain) + list(r.notes)
+    parts = ([r.explanation] if r.explanation else []) + \
+        ([f"Not in the corpus: {'; '.join(r.missing)}"] if r.missing else []) + list(r.notes) + list(r.reasoning_chain)
     text = " | ".join(parts) if parts else r.stop_reason
     if r.stop_reason and not r.stop_reason.startswith("evidence_sufficient"):
         text += f" | stop: {r.stop_reason}"
@@ -49,9 +50,9 @@ def explanation_of(r) -> str:
 
 
 def answer_line(r) -> dict:
-    status = status_of(r.answer)
+    status = r.status or status_of(r.answer)
     line = {"qid": r.qid, "status": status, "answer": None if status == "not_in_corpus" else r.answer,
-            "explanation": explanation_of(r), "citations": [] if status == "not_in_corpus" else citations_of(r),
+            "explanation": explanation_of(r), "citations": citations_of(r),
             "input_tokens": r.input_tokens, "output_tokens": r.output_tokens, "latency_ms": int(round(r.latency_ms)),
             "trace": r.trace}
     tin = sum(s.get("input_tokens", 0) for s in r.trace)

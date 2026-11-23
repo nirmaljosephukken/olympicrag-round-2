@@ -40,7 +40,28 @@ venv the results were produced with); `requirements.txt` lists the direct depend
   with an ISO-8601 UTC timestamp, the question id, parameters, rows, time and transport (MCP or RESTPP).
 * **Rate limiting before the clock.** Free-tier waits happen before a question starts (`agr/llm.py: wait_for_budget`), so
   they are not part of `latency_ms`.
-* **Status.** For now an `unknown` answer is reported as `not_in_corpus`; `partial` is not produced yet.
+* **Films and politicians** (`agr/entities.py`, no LLM). 546 film infoboxes become `Film` vertices (release year,
+  director, cast, music, budget and gross as written and as numbers with currency: budget parsed for 496, gross for 517)
+  with `Film -FILM_CREDIT(role)-> Person`. 73 officeholder infoboxes become 240 `OfficeTerm` vertices, one per numbered
+  office group (`office2`, `term_start2`, `predecessor2` ...), with `Person -HELD-> OfficeTerm`,
+  `OfficeTerm -PRECEDED_BY / SUCCEEDED_BY-> Person` and `OfficeTerm -NEXT_TERM-> OfficeTerm` when the successor has an
+  article with the same office. Queries `film_facts`, `office_succession`.
+* **Cross-Games tools.** `repeat_winners` (same athlete, same event, several Games), `participation_by_edition`
+  (nations / competitors at every edition of one event, with max and min), `medal_table` (medals per nation in one sport
+  at one Games). The installed queries return rows; grouping, ranking and max / min are done in code
+  (`agr/crossgames.py`) so they are exact and testable offline.
+* **Source reliability.** Each source record gets a tier from its Source line (1 official record: signed decisions,
+  juries, certificates, registers, official timing; 2 operational: feeds, schedules, scoreboards, logs; 3 news/media;
+  4 informal: blogs, fan or spectator posts, volunteer notes, tourism sites, automated emails) and any provisional
+  wording it contains. Records link to an event from the title, or from the text when the sport or venue is also named
+  and exactly one event name matches (23 of 39 linked); ambiguous records stay unlinked.
+* **Grounding and status.** An answer may combine several cited evidence items, but every name and number in it must be
+  stated in one of them (`agr/grounding.py`, in code). The agent returns `status` (answered / partial / not_in_corpus),
+  the `missing` parts and an explanation; code checks them: an empty or unknown answer is `not_in_corpus`, an answer
+  with missing parts is `partial`, `not_in_corpus` is only accepted after at least one search, and an answer that fails
+  grounding twice is withheld as `not_in_corpus`. The evidence policy (most authoritative source for the time asked
+  wins, later publication does not override a signed decision, registrations are not starters, missing evidence is not
+  a negative fact, report what was provisional or superseded) is part of the answer rules.
 * **Scoring and metrics.** `scripts/score_public.py` scores the public answers fact by fact (deterministic normalised
   matching, optional LLM judge with `--judge`); `scripts/metrics.py` computes `metrics.json` exactly from the answer files.
 
