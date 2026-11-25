@@ -31,8 +31,16 @@ RPM = int(os.getenv("LLM_RPM", "15" if SETTINGS.llm_provider == "gemini" else "0
 _calls: collections.deque = collections.deque()   # start times of the calls in the last 60 s
 WAITS = {"in_question_s": 0.0}
 
-# One or more Gemini keys: GEMINI_API_KEYS=key1,key2 (rotated when a key's daily quota is spent) or GEMINI_API_KEY.
-_KEYS = [k.strip() for k in (os.getenv("GEMINI_API_KEYS") or SETTINGS.gemini_key).split(",") if k.strip()]
+# One or more Gemini keys, rotated when a key's daily quota is spent: GEMINI_API_KEYS=key1,key2 and/or
+# GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3 ... (duplicates removed, order kept).
+def _gemini_keys() -> list[str]:
+    found = [k for k in (os.getenv("GEMINI_API_KEYS") or "").split(",")] + [SETTINGS.gemini_key]
+    found += [os.environ[n] for n in sorted((n for n in os.environ if re.fullmatch(r"GEMINI_API_KEY\d+", n)),
+                                            key=lambda n: int(n[14:]))]
+    return list(dict.fromkeys(k.strip() for k in found if k and k.strip()))
+
+
+_KEYS = _gemini_keys()
 _key_idx = [0]
 
 
