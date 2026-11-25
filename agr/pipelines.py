@@ -426,6 +426,7 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     history: list[tuple[str, bool]] = [(f"step 1 entity_linker -> {link.summary}", False)]
     used: set[str] = set()
     last_family, last_found, rejections, nic_pushbacks, auto_searched = "link", True, 0, 0, False
+    writer_used = False
     max_rejections = 2
     for step in range(max_steps):
         remaining = max_steps - step
@@ -466,6 +467,13 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
                     continue
                 h._trace(tool="evidence_evaluator", tigergraph=False, ok=True, ms=0.0)
                 return not_in_corpus(h, d, cites, "the agent found no evidence that answers the question")
+            if ANSWER_MODEL and not writer_used:
+                writer_used = True   # optional: a stronger model writes the final answer from the cited evidence
+                d2 = write_answer(h, question, d, ans, cites)
+                if d2:
+                    a2, c2, s2, m2 = answer_fields(d2)
+                    if s2 != "not_in_corpus" and h.ground(a2, c2).ok:
+                        d, ans, cites, status, missing = d2, a2, c2, s2, m2
             g = h.ground(ans, cites)
             h.res.steps.append(Step(len(h.res.steps) + 1, "evidence_evaluator", "check_grounding",
                                     {"answer": ans, "citations": cites}, h.res.grounding, g.ok, 0.0))
@@ -508,6 +516,31 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         return not_in_corpus(h, j, cites, "step budget exhausted without evidence that answers the question")
     g = h.ground(ans, cites)
     return accept(h, j, ans, cites, missing, "step_budget_exhausted: " + g.reason) if g.ok else withhold(h, g)
+
+
+ANSWER_MODEL = __import__("os").getenv("ANSWER_MODEL", "")   # optional stronger model for the final answer only
+
+
+def write_answer(h: Harness, question: str, d: dict, draft: str, cites: list[str]) -> dict:
+    """Answer writer (only with ANSWER_MODEL set): rewrites the orchestrator's draft from the cited evidence with a
+    stronger model, under the same answer rules. The result is checked by the same grounding code; if it fails,
+    the draft is kept."""
+    items = [h.ledger[str(c).strip("[]")] for c in cites if str(c).strip("[]") in h.ledger] or list(h.ledger.values())
+    context = "\n".join(f"[{e.id}] ({e.title}) {e.text[:2500]}" for e in items)[:16000]
+    prompt = (f"{ANSWER_RULES}\n\nEvidence (each item has an id in brackets):\n{context}\n\nQuestion: {question}\n"
+              f"Draft answer: {draft}\n\nWrite the final answer from the evidence (improve the draft: complete, "
+              f"precise, every name and number from the evidence). Return JSON: {{\"answer\": str, "
+              f"\"asked_parts\": [{{\"part\": str, \"stated\": bool}}], \"missing\": [str], "
+              f"\"explanation\": str, \"citations\": [evidence ids], \"confidence\": \"high|medium|low\"}}")
+    try:
+        r = generate(prompt, model=ANSWER_MODEL, json_mode=True, max_output_tokens=2000)
+    except RuntimeError:
+        return {}
+    h.res.input_tokens += r.input_tokens
+    h.res.output_tokens += r.output_tokens
+    h.res.llm_calls += 1
+    h.log_llm_step("answer_writer", "write_answer", r)
+    return r.json()
 
 
 def auto_search_plan(question: str, used: set[str]) -> list[tuple[str, dict]]:
