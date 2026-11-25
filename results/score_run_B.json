@@ -1,0 +1,1375 @@
+{
+ "summary": {
+  "questions": 50,
+  "answered_files": 50,
+  "accuracy_pct": 86.6,
+  "full_credit": 38,
+  "status_matches": 45,
+  "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
+  "citation_precision_avg": 0.741,
+  "citation_recall_avg": 0.794,
+  "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
+  "grounding_report": {
+   "supported by cited evidence": 42,
+   "not_in_corpus": 8
+  },
+  "tokens_per_correct_answer": 10449,
+  "accuracy_by_style": {
+   "count / comparison": {
+    "questions": 10,
+    "accuracy_pct": 91.7,
+    "failing": [
+     "r2-pub-042",
+     "r2-pub-045"
+    ]
+   },
+   "explanation": {
+    "questions": 12,
+    "accuracy_pct": 69.3,
+    "failing": [
+     "r2-pub-020",
+     "r2-pub-039",
+     "r2-pub-041",
+     "r2-pub-043",
+     "r2-pub-044",
+     "r2-pub-047",
+     "r2-pub-050"
+    ]
+   },
+   "list": {
+    "questions": 13,
+    "accuracy_pct": 100.0,
+    "failing": []
+   },
+   "not_in_corpus": {
+    "questions": 4,
+    "accuracy_pct": 100.0,
+    "failing": []
+   },
+   "partial": {
+    "questions": 2,
+    "accuracy_pct": 40.0,
+    "failing": [
+     "r2-pub-029",
+     "r2-pub-048"
+    ]
+   },
+   "short factual": {
+    "questions": 5,
+    "accuracy_pct": 80.0,
+    "failing": [
+     "r2-pub-030"
+    ]
+   },
+   "trend across editions": {
+    "questions": 4,
+    "accuracy_pct": 100.0,
+    "failing": []
+   }
+  }
+ },
+ "questions": [
+  {
+   "qid": "r2-pub-001",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"athlete\": \"Ayumi Tanimoto\", \"event\": \"Women's 63 kg\", \"years\": [2004, 2008]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Kayla Harrison\", \"event\": \"Women's 78 kg\", \"years\": [2012, 2016]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Masae Ueno\", \"event\": \"Women's 70 kg\", \"years\": [2004, 2008]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Shohei Ono\", \"event\": \"Men's 73 kg\", \"years\": [2016, 2020]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Tadahiro Nomura\", \"event\": \"Men's 60 kg\", \"years\": [1996, 2000, 2004]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Teddy Riner\", \"event\": \"Men's +100 kg\", \"years\": [2012, 2016]}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.867,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4844
+  },
+  {
+   "qid": "r2-pub-002",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"athlete\": \"Valentina Vezzali\", \"event\": \"Women's foil\", \"years\": [2000, 2004, 2008]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Áron Szilágyi\", \"event\": \"Men's sabre\", \"years\": [2012, 2016]}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4528
+  },
+  {
+   "qid": "r2-pub-003",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"event\": \"Men's Greco-Roman 60 kg\", \"gold\": \"Kenichiro Fumita\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's Greco-Roman 77 kg\", \"gold\": \"Nao Kusaka\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's freestyle 57 kg\", \"gold\": \"Rei Higuchi\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's freestyle 65 kg\", \"gold\": \"Kotaro Kiyooka\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 53 kg\", \"gold\": \"Akari Fujinami\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 57 kg\", \"gold\": \"Tsugumi Sakurai\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 62 kg\", \"gold\": \"Sakura Motoki\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 76 kg\", \"gold\": \"Yuka Kagami\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.444,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4882
+  },
+  {
+   "qid": "r2-pub-004",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2012, \"gold\": \"Yi Siling\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"gold\": \"Virginia Thrasher\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"gold\": \"Ban Hyo-jin\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"gold\": \"Brooke Whitford\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.4,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 10390
+  },
+  {
+   "qid": "r2-pub-005",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"film\": \"Splash\", \"year\": 1984}",
+     1.0
+    ],
+    [
+     "{\"film\": \"Parenthood\", \"year\": 1989}",
+     1.0
+    ],
+    [
+     "{\"film\": \"Backdraft\", \"year\": 1991}",
+     1.0
+    ],
+    [
+     "{\"film\": \"Far and Away\", \"year\": 1992}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4885
+  },
+  {
+   "qid": "r2-pub-006",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "noc=JPN",
+     1.0
+    ],
+    [
+     "golds=8",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.444,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4779
+  },
+  {
+   "qid": "r2-pub-007",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "noc=JPN",
+     1.0
+    ],
+    [
+     "golds=9",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.643,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4755
+  },
+  {
+   "qid": "r2-pub-008",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "count=8",
+     1.0
+    ],
+    [
+     "AUS",
+     1.0
+    ],
+    [
+     "CAN",
+     1.0
+    ],
+    [
+     "CHN",
+     1.0
+    ],
+    [
+     "CZE",
+     1.0
+    ],
+    [
+     "FRA",
+     1.0
+    ],
+    [
+     "GER",
+     1.0
+    ],
+    [
+     "ITA",
+     1.0
+    ],
+    [
+     "NZL",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4914
+  },
+  {
+   "qid": "r2-pub-009",
+   "style": "trend across editions",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 1988, \"nations\": 19}",
+     1.0
+    ],
+    [
+     "{\"year\": 1992, \"nations\": 25}",
+     1.0
+    ],
+    [
+     "{\"year\": 2000, \"nations\": 30}",
+     1.0
+    ],
+    [
+     "{\"year\": 2004, \"nations\": 36}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"nations\": 33}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"nations\": 35}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"nations\": 32}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"nations\": 33}",
+     1.0
+    ],
+    [
+     "max_year=2004",
+     1.0
+    ],
+    [
+     "min_year=1988",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4834
+  },
+  {
+   "qid": "r2-pub-010",
+   "style": "trend across editions",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2000, \"nations\": 14}",
+     1.0
+    ],
+    [
+     "{\"year\": 2004, \"nations\": 16}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"nations\": 16}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"nations\": 16}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"nations\": 16}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"nations\": 17}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"nations\": 15}",
+     1.0
+    ],
+    [
+     "max_year=2024",
+     1.0
+    ],
+    [
+     "min_year=2000",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 5718
+  },
+  {
+   "qid": "r2-pub-011",
+   "style": "trend across editions",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 1996, \"nations\": 12}",
+     1.0
+    ],
+    [
+     "{\"year\": 2000, \"nations\": 15}",
+     1.0
+    ],
+    [
+     "{\"year\": 2004, \"nations\": 22}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"nations\": 21}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"nations\": 24}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"nations\": 23}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"nations\": 28}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"nations\": 27}",
+     1.0
+    ],
+    [
+     "max_year=2024",
+     1.0
+    ],
+    [
+     "min_year=1996",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 14048
+  },
+  {
+   "qid": "r2-pub-012",
+   "style": "trend across editions",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 1988, \"nations\": 16}",
+     1.0
+    ],
+    [
+     "{\"year\": 2000, \"nations\": 24}",
+     1.0
+    ],
+    [
+     "{\"year\": 2004, \"nations\": 24}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"nations\": 26}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"nations\": 32}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"nations\": 24}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"nations\": 21}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"nations\": 19}",
+     1.0
+    ],
+    [
+     "max_year=2012",
+     1.0
+    ],
+    [
+     "min_year=1988",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4798
+  },
+  {
+   "qid": "r2-pub-013",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2016, \"event\": \"Women's artistic individual all-around\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Women's balance beam\", \"medal\": \"bronze\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Women's floor\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Women's vault\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"event\": \"Women's artistic individual all-around\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"event\": \"Women's floor\", \"medal\": \"silver\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"event\": \"Women's vault\", \"medal\": \"gold\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.778,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 5262
+  },
+  {
+   "qid": "r2-pub-014",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2004, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Women's freestyle 58 kg\", \"medal\": \"gold\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4829
+  },
+  {
+   "qid": "r2-pub-015",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2012, \"event\": \"Men's +100 kg\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Men's +100 kg\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2020, \"event\": \"Men's +100 kg\", \"medal\": \"bronze\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.75,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4888
+  },
+  {
+   "qid": "r2-pub-016",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2008, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2008, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2012, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4938
+  },
+  {
+   "qid": "r2-pub-017",
+   "style": "short factual",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Amistad",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 0.2,
+   "grounding": "supported by cited evidence",
+   "tokens": 5224
+  },
+  {
+   "qid": "r2-pub-018",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Bob Holden",
+     1.0
+    ],
+    [
+     "Roger B. Wilson",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 6850
+  },
+  {
+   "qid": "r2-pub-019",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "John Baldacci",
+     1.0
+    ],
+    [
+     "John R. McKernan Jr.",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4482
+  },
+  {
+   "qid": "r2-pub-020",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 23081
+  },
+  {
+   "qid": "r2-pub-021",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 7253
+  },
+  {
+   "qid": "r2-pub-022",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 19016
+  },
+  {
+   "qid": "r2-pub-023",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 7788
+  },
+  {
+   "qid": "r2-pub-024",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 10259
+  },
+  {
+   "qid": "r2-pub-025",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "event=Men's decathlon",
+     1.0
+    ],
+    [
+     "nations=13",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4958
+  },
+  {
+   "qid": "r2-pub-026",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "event=Men's individual road race",
+     1.0
+    ],
+    [
+     "nations=53",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.333,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4802
+  },
+  {
+   "qid": "r2-pub-027",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "event=Mixed 10 metre air pistol team",
+     1.0
+    ],
+    [
+     "nations=12",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4696
+  },
+  {
+   "qid": "r2-pub-028",
+   "style": "not_in_corpus",
+   "gold_status": "not_in_corpus",
+   "status": "not_in_corpus",
+   "score": 1.0,
+   "facts": [],
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0,
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": "not_in_corpus",
+   "tokens": 17760
+  },
+  {
+   "qid": "r2-pub-029",
+   "style": "partial",
+   "gold_status": "partial",
+   "status": "partial",
+   "score": 0.8,
+   "facts": [
+    [
+     "{\"year\": 2004, \"gold\": \"Keiji Suzuki\"}",
+     0.0
+    ],
+    [
+     "{\"year\": 2012, \"gold\": \"Teddy Riner\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"gold\": \"Teddy Riner\"}",
+     1.0
+    ],
+    [
+     "missing:2008",
+     1.0
+    ],
+    [
+     "status=partial",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.8,
+   "citation_precision": 0.5,
+   "citation_recall": 0.333,
+   "grounding": "supported by cited evidence",
+   "tokens": 23931
+  },
+  {
+   "qid": "r2-pub-030",
+   "style": "short factual",
+   "gold_status": "answered",
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 8208
+  },
+  {
+   "qid": "r2-pub-031",
+   "style": "not_in_corpus",
+   "gold_status": "not_in_corpus",
+   "status": "not_in_corpus",
+   "score": 1.0,
+   "facts": [],
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0,
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": "not_in_corpus",
+   "tokens": 8565
+  },
+  {
+   "qid": "r2-pub-032",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"athlete\": \"Philipp Schoch\", \"event\": \"Men's parallel giant slalom\", \"years\": [2002, 2006]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Seth Wescott\", \"event\": \"Men's snowboard cross\", \"years\": [2006, 2010]}",
+     1.0
+    ],
+    [
+     "{\"athlete\": \"Shaun White\", \"event\": \"Men's halfpipe\", \"years\": [2006, 2010]}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4556
+  },
+  {
+   "qid": "r2-pub-033",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "noc=NED",
+     1.0
+    ],
+    [
+     "golds=4",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.286,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4934
+  },
+  {
+   "qid": "r2-pub-034",
+   "style": "list",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2028, \"event\": \"Women's artistic individual all-around\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"event\": \"Women's balance beam\", \"medal\": \"gold\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"event\": \"Women's floor\", \"medal\": \"gold\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4653
+  },
+  {
+   "qid": "r2-pub-035",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "event=Women's 50-metre freestyle",
+     1.0
+    ],
+    [
+     "nations=72",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4994
+  },
+  {
+   "qid": "r2-pub-036",
+   "style": "short factual",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Brooke Whitford",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4504
+  },
+  {
+   "qid": "r2-pub-037",
+   "style": "short factual",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Xinyi Gu",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 14813
+  },
+  {
+   "qid": "r2-pub-038",
+   "style": "short factual",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "22",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.111,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 9591
+  },
+  {
+   "qid": "r2-pub-039",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.612,
+   "facts": [
+    [
+     "text",
+     0.61
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.612,
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 11818
+  },
+  {
+   "qid": "r2-pub-040",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 0.5,
+   "grounding": "supported by cited evidence",
+   "tokens": 7932
+  },
+  {
+   "qid": "r2-pub-041",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.649,
+   "facts": [
+    [
+     "text",
+     0.65
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.649,
+   "citation_precision": 1.0,
+   "citation_recall": 0.333,
+   "grounding": "supported by cited evidence",
+   "tokens": 5920
+  },
+  {
+   "qid": "r2-pub-042",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "partial",
+   "score": 0.5,
+   "facts": [
+    [
+     "planned=Long Beach Arena",
+     0.0
+    ],
+    [
+     "actual=Carson Velodrome",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.5,
+   "citation_precision": 1.0,
+   "citation_recall": 0.333,
+   "grounding": "supported by cited evidence",
+   "tokens": 20829
+  },
+  {
+   "qid": "r2-pub-043",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.989,
+   "facts": [
+    [
+     "text",
+     0.99
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.989,
+   "citation_precision": 1.0,
+   "citation_recall": 0.75,
+   "grounding": "supported by cited evidence",
+   "tokens": 8406
+  },
+  {
+   "qid": "r2-pub-044",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.714,
+   "facts": [
+    [
+     "text",
+     0.71
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.714,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 17532
+  },
+  {
+   "qid": "r2-pub-045",
+   "style": "count / comparison",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.667,
+   "facts": [
+    [
+     "registered_slots=42",
+     1.0
+    ],
+    [
+     "competitors=40",
+     1.0
+    ],
+    [
+     "nations=31",
+     0.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.667,
+   "citation_precision": 1.0,
+   "citation_recall": 0.667,
+   "grounding": "supported by cited evidence",
+   "tokens": 7877
+  },
+  {
+   "qid": "r2-pub-046",
+   "style": "not_in_corpus",
+   "gold_status": "not_in_corpus",
+   "status": "not_in_corpus",
+   "score": 1.0,
+   "facts": [],
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "not_in_corpus",
+   "tokens": 11311
+  },
+  {
+   "qid": "r2-pub-047",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 25976
+  },
+  {
+   "qid": "r2-pub-048",
+   "style": "partial",
+   "gold_status": "partial",
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 19096
+  },
+  {
+   "qid": "r2-pub-049",
+   "style": "not_in_corpus",
+   "gold_status": "not_in_corpus",
+   "status": "not_in_corpus",
+   "score": 1.0,
+   "facts": [],
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 0.333,
+   "grounding": "not_in_corpus",
+   "tokens": 10316
+  },
+  {
+   "qid": "r2-pub-050",
+   "style": "explanation",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 0.357,
+   "facts": [
+    [
+     "text",
+     0.36
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.357,
+   "citation_precision": 1.0,
+   "citation_recall": 0.667,
+   "grounding": "supported by cited evidence",
+   "tokens": 7091
+  }
+ ]
+}
