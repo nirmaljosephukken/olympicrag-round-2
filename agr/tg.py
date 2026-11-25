@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -125,8 +126,11 @@ class TG:
             return p.read_text().strip() or None
         return None
 
-    def wait_until_awake(self, max_wait: float = 300):
-        t0 = time.time()
+    def wait_until_awake(self, max_wait: float | None = None) -> float:
+        """Wake a Savanna workspace that auto-suspended (any request starts it) and wait until it answers, with
+        back-off (5 s doubling to 60 s), for up to TG_WAKE_MAX_S seconds (default 900). Returns the seconds waited."""
+        max_wait = float(os.getenv("TG_WAKE_MAX_S", "900")) if max_wait is None else max_wait
+        t0, delay = time.time(), 5.0
         while True:
             try:
                 r = self.http.get(f"{self.base}/api/ping", timeout=30)
@@ -134,11 +138,13 @@ class TG:
             except requests.RequestException:
                 ok = False
             if ok:
-                return
+                return time.time() - t0
             if time.time() - t0 > max_wait:
-                raise TigerGraphError("Savanna workspace still starting; resume it in the Savanna console")
-            print("[tigergraph] workspace starting, waiting 10s ...", flush=True)
-            time.sleep(10)
+                raise TigerGraphError(f"TigerGraph workspace did not answer within {max_wait:.0f} s "
+                                      f"(still starting?); check it in the Savanna console")
+            print(f"[tigergraph] workspace starting (auto-resume), retrying in {delay:.0f} s ...", flush=True)
+            time.sleep(delay)
+            delay = min(delay * 2, 60)
 
     def token(self) -> str:
         if self._token:
@@ -164,8 +170,12 @@ class TG:
 
     def _req(self, method: str, url: str, **kw) -> requests.Response:
         for attempt in range(6):
-            r = self.http.request(method, url, **kw)
-            if r.status_code in (502, 503, 504) or "Starting workspace" in r.text[:300]:
+            try:
+                r = self.http.request(method, url, **kw)
+            except (requests.ConnectionError, requests.Timeout):
+                self.wait_until_awake()   # connection dropped while the workspace suspends / resumes
+                continue
+            if r.status_code in (502, 503, 504) or re.search(r"starting workspace|is starting", r.text[:300], re.I):
                 self.wait_until_awake()
                 continue
             if r.status_code == 401 and attempt == 0:

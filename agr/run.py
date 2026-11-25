@@ -81,7 +81,10 @@ def main() -> int:
     print(f"[run] {len(qs)} questions, {len(done)} already answered, {len(todo)} to run", flush=True)
 
     tb = Toolbox()
-    tb.catalog()  # warm the entity-linking catalogue before any clock starts
+    # warm-up before any clock starts: wake the workspace if it auto-suspended, then load the catalogue
+    waited = tb.tg.wait_until_awake(max_wait=float(__import__("os").getenv("TG_WAKE_MAX_S", "900")))
+    print(f"[run] TigerGraph workspace answering (waited {waited:.0f} s)", flush=True)
+    tb.catalog()
     failed = 0
     t_run = time.time()
     for i, q in enumerate(todo, 1):
@@ -94,9 +97,20 @@ def main() -> int:
             if "daily quota" in str(e):
                 print(f"[run] stopping: {e}. Re-run the same command later to resume.", flush=True)
                 return 2
-            print(f"[run] {q['qid']} FAILED: {e}", flush=True)
-            failed += 1
-            continue
+            if isinstance(e, tg.TigerGraphError) or "workspace" in str(e).lower():
+                try:   # the workspace went to sleep mid-run: wake it and retry this question once
+                    tb.tg.wait_until_awake()
+                    llm.wait_for_budget()
+                    r = run_agentic(tb, q["qid"], q["question"]) if a.pipeline == "agentic" else \
+                        PIPELINES[a.pipeline](tb, q["qid"], q["question"])
+                except RuntimeError as e2:
+                    e = e2
+                else:
+                    e = None
+            if e is not None:
+                print(f"[run] {q['qid']} FAILED: {e}", flush=True)
+                failed += 1
+                continue
         finally:
             tg.CONTEXT["qid"] = ""
         line = answer_line(r)

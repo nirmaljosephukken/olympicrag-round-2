@@ -100,7 +100,7 @@ class TigerGraphMCP:
         args = {qkey: query, pkey: params}
         if "graph_name" in props:
             args["graph_name"] = self.s.tg_graph
-        out = self._run(self._call(tool, args))
+        out = self._run(self._call(tool, args), timeout=float(os.getenv("TG_MCP_TIMEOUT_S", "90")))
         if isinstance(out, str) and "```json" in out:
             try:
                 out = json.loads(out.split("```json", 1)[1].split("```", 1)[0])

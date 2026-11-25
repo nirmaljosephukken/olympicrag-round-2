@@ -140,3 +140,35 @@ def test_scorer_style_citations_and_grounding():
     assert s.citation_scores({"gold_doc_ids": []}, {"citations": ["A"]}) == (None, None)
     ok = {"status": "answered", "trace": [{"tool": "evidence_evaluator", "ok": True}]}
     assert s.grounding_verdict(ok) == "supported by cited evidence"
+
+
+def test_sleeping_workspace_is_woken_with_backoff(monkeypatch):
+    from agr import tg as tgmod
+
+    class Resp:
+        def __init__(self, code, text):
+            self.status_code, self.text = code, text
+
+    class Http:
+        def __init__(self):
+            self.n = 0
+
+        def get(self, url, timeout=30):
+            self.n += 1
+            return Resp(200, '{"message":"pong"}') if self.n >= 3 else Resp(502, '{"message":"Workspace x is starting"}')
+
+        def request(self, method, url, **kw):
+            self.n += 1
+            if self.n == 1:
+                raise tgmod.requests.ConnectionError("reset")
+            return Resp(200, '{"results": []}')
+
+    slept = []
+    monkeypatch.setattr(tgmod.time, "sleep", lambda s: slept.append(s))
+    t = tgmod.TG.__new__(tgmod.TG)
+    t.base, t.http = "https://ws", Http()
+    t.wait_until_awake(max_wait=600)
+    assert slept == [5.0, 10.0]                        # back-off while the workspace starts
+    t.http = Http()
+    t.http.get = lambda url, timeout=30: Resp(200, "pong")
+    assert t._req("GET", "https://ws/x").status_code == 200   # a dropped connection is retried after a wake-up
