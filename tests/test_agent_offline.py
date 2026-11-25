@@ -88,3 +88,16 @@ def test_history_keeps_recent_observations_in_full():
     h = [("step 1 link", False)] + [(f"step {i} obs " + "x" * 2000, True) for i in range(2, 6)]
     out = pipelines.render_history(h).split("\n")
     assert [len(l) > 1500 for l in out] == [False, False, False, True, True]
+
+
+def test_status_from_asked_parts():
+    f = pipelines.answer_fields
+    parts = lambda *xs: [{"part": p, "stated": v} for p, v in xs]
+    assert f({"answer": "No duration was ever confirmed.", "asked_parts": parts(("official duration", False))})[2] \
+        == "not_in_corpus"
+    a = f({"answer": "Two informal claims (11 and 14 min); nothing confirmed.",
+           "asked_parts": parts(("what the accounts say", True), ("what is confirmed", False))})
+    assert a[2] == "partial" and a[3] == ["what is confirmed"]
+    assert f({"answer": "No, absence of a log entry proves nothing.",
+              "asked_parts": parts(("does the absence prove it", "true"))})[2] == "answered"
+    assert f({"answer": "X", "asked_parts": parts(("a", True)), "missing": ["stale"]})[2] == "answered"

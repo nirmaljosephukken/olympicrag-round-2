@@ -169,7 +169,8 @@ class Harness:
 
     def log_llm_step(self, agent: str, action: str, r, reasoning: str = "", args: dict | None = None):
         self._trace(tool="llm_" + agent, tigergraph=False, decision=action, input_tokens=r.input_tokens,
-                    output_tokens=r.output_tokens, ms=round(r.ms, 1))
+                    output_tokens=r.output_tokens, ms=round(getattr(r, "total_ms", 0) or r.ms, 1),
+                    llm_ms=round(r.ms, 1), llm_key=getattr(r, "key", 0), attempts=getattr(r, "attempts", 1))
         self.res.steps.append(Step(len(self.res.steps) + 1, agent, action, args or {}, r.text[:600], True,
                                    round(r.ms, 1), r.input_tokens, r.output_tokens, 0, reasoning))
 
@@ -232,9 +233,10 @@ ANSWER_RULES = """Answer rules:
 - Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
   (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
   a "why" question gives the reason the evidence states.
-- fact_stated: "yes" if the evidence states every fact the question asks for, "partly" if only some, "no" if none
-  (e.g. the evidence only says it is unknown, anonymous, unverified or not recorded). For a question that asks
-  whether something is established or proven, the fact asked for is that judgement: "yes" when you can give it.
+- asked_parts: split the question into the facts it asks for and mark each one: "stated": true only if the
+  evidence gives that fact itself (a name, number, time, place, reason, list). A fact the evidence only calls unknown,
+  anonymous, unverified, unconfirmed, provisional or not recorded is NOT stated (false). When the question asks
+  whether something is established, proven or superseded, that judgement is the fact: true when you can give it.
 - status: "answered" when the evidence answers every part; "partial" when some parts are present and others are not in
   the corpus (answer the present parts, list the absent ones in "missing"); "not_in_corpus" when the specific fact
   asked for is absent. If the evidence only shows that the asked fact is unknown, anonymous, unverified or not
@@ -254,7 +256,8 @@ Evidence policy (sources can disagree or change over time):
 
 def _answer_json(h: Harness, agent: str, question: str, context: str) -> dict:
     prompt = (f"{ANSWER_RULES}\n\nEvidence (each item has an id in brackets):\n{context}\n\n"
-              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, \"fact_stated\": \"yes|partly|no\", "
+              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, "
+              f"\"asked_parts\": [{{\"part\": str, \"stated\": bool}}], "
               f"\"status\": \"answered|partial|not_in_corpus\", "
               f"\"missing\": [str], \"explanation\": str, \"citations\": [evidence ids], "
               f"\"confidence\": \"high|medium|low\"}}")
@@ -347,7 +350,8 @@ Stop when the evidence answers the question: action "final_answer".
 
 Reply with JSON only:
 {{"reasoning": "<short>", "action": "<tool or final_answer>", "args": {{...}},
-  "answer": "<final_answer only>", "fact_stated": "yes|partly|no", "status": "answered|partial|not_in_corpus",
+  "answer": "<final_answer only>", "asked_parts": [{{"part": "<fact asked>", "stated": true}}],
+  "status": "answered|partial|not_in_corpus",
   "missing": ["<part>"],
   "explanation": "<one sentence>", "citations": ["E3"], "confidence": "high|medium|low"}}"""
 
@@ -362,7 +366,8 @@ TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events":
 FEEDBACK = {
     "unsupported": "Part of the answer is not in the cited evidence. Cite every item that states it, write names and "
                    "numbers exactly as the evidence does (e.g. a nation code such as JPN, not a country name), "
-                   "drop what no evidence states, or gather it first.",
+                   "or gather it first. If no evidence states it, remove it from the answer and list that part "
+                   "as not stated in asked_parts (the status becomes partial); never keep an unstated name.",
     "uncited": "Cite the evidence ids that state the answer.",
     "unknown": "Keep investigating with a different tool or filter before giving up.",
     "ids": "You wrote evidence ids (like E7) inside the answer text. Ids belong only in \"citations\"; write the names, "
@@ -473,23 +478,35 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     return accept(h, j, ans, cites, missing, "step_budget_exhausted: " + g.reason) if g.ok else withhold(h, g)
 
 
-ANSWER_KEYS = ("answer", "fact_stated", "status", "missing", "explanation", "citations", "confidence")
+ANSWER_KEYS = ("answer", "asked_parts", "fact_stated", "status", "missing", "explanation", "citations",
+               "confidence")
 NOT_FOUND = {"", "unknown", "none", "n a", "not in corpus", "not in the corpus", "not_in_corpus", "null"}
 
 
 def answer_fields(d: dict) -> tuple[str, list[str], str, list[str]]:
-    """(answer text, citation ids, status, missing parts) from the agent's JSON, with the status checked in code:
-    an empty / 'unknown' answer is not_in_corpus; an answer with missing parts is partial; otherwise answered."""
+    """(answer text, citation ids, status, missing parts) from the agent's JSON, with the status decided in code:
+    an empty / 'unknown' answer is not_in_corpus; otherwise the agent's asked_parts decide it: no part stated ->
+    not_in_corpus, some parts not stated -> partial (those parts are the missing ones), all stated -> answered.
+    Without asked_parts, the missing list (or the older fact_stated field) decides."""
     ans = d.get("answer")
     ans = json.dumps(ans, ensure_ascii=False) if isinstance(ans, (list, dict)) else str(ans or "")
     cites = [str(c) for c in (d.get("citations") or [])] if isinstance(d.get("citations"), list) else []
     missing = [str(m) for m in (d.get("missing") or []) if str(m).strip()] if isinstance(d.get("missing"), list) else []
     status = str(d.get("status") or "").strip().lower()
     stated = str(d.get("fact_stated") or "").strip().lower()
+    parts = [x for x in (d.get("asked_parts") or []) if isinstance(x, dict) and str(x.get("part", "")).strip()] \
+        if isinstance(d.get("asked_parts"), list) else []
+    if parts:
+        is_true = lambda v: v is True or str(v).strip().lower() in ("true", "yes", "1")
+        absent = [str(x["part"]) for x in parts if not is_true(x.get("stated"))]
+        stated = "no" if len(absent) == len(parts) else ("partly" if absent else "yes")
+        missing = missing or absent
     if status == "not_in_corpus" or norm(ans) in NOT_FOUND or stated == "no":
         return ans, cites, "not_in_corpus", missing
     if stated == "partly" and not missing:
         missing = ["part of what was asked is not stated in the corpus"]
+    if stated == "yes":
+        return ans, cites, "answered", []
     return ans, cites, "partial" if missing else "answered", missing
 
 

@@ -107,6 +107,9 @@ class LLMResult:
     output_tokens: int  # includes thinking tokens
     ms: float
     model: str
+    key: int = 0          # which configured key served the call (1-based index, never the key itself)
+    attempts: int = 1     # requests made, including retries
+    total_ms: float = 0.0 # wall time including retries and back-off
 
     def json(self) -> dict:
         d = self._json()
@@ -192,7 +195,7 @@ def generate(prompt: str, system: str | None = None, model: str | None = None, j
              temperature: float = 0.0, max_output_tokens: int = 1024) -> LLMResult:
     model = model or SETTINGS.model
     call = PROVIDERS[SETTINGS.llm_provider]
-    delay, last = 2.0, None
+    delay, last, t_start = 2.0, None, time.time()
     for attempt in range(8):
         _take_slot()
         t0 = time.time()
@@ -204,7 +207,8 @@ def generate(prompt: str, system: str | None = None, model: str | None = None, j
         if status == "ok":
             text, tin, tout = out
             return LLMResult(text=text, input_tokens=tin, output_tokens=tout, ms=(time.time() - t0) * 1000,
-                             model=model)
+                             model=model, key=_key_idx[0] + 1, attempts=attempt + 1,
+                             total_ms=(time.time() - t_start) * 1000)
         last = out
         if status == "retry_now":
             continue
