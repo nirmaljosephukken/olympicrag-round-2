@@ -227,7 +227,8 @@ class Harness:
 
 ANSWER_RULES = """Answer rules:
 - Use ONLY the evidence. Every name and number in the answer must be stated in an evidence item you cite (several
-  items may be combined). Evidence ids (E3) go in "citations", never in the answer text.
+  items may be combined). Evidence ids (E3) go in "citations", never in the answer text. Write names as the
+  evidence writes them (a nation given as a code such as JPN stays JPN, not a country name you supply).
 - Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
   (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
   a "why" question gives the reason the evidence states.
@@ -360,7 +361,8 @@ TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events":
 
 FEEDBACK = {
     "unsupported": "Part of the answer is not in the cited evidence. Cite every item that states it, write names and "
-                   "numbers exactly as the evidence does, drop what no evidence states, or gather it first.",
+                   "numbers exactly as the evidence does (e.g. a nation code such as JPN, not a country name), "
+                   "drop what no evidence states, or gather it first.",
     "uncited": "Cite the evidence ids that state the answer.",
     "unknown": "Keep investigating with a different tool or filter before giving up.",
     "ids": "You wrote evidence ids (like E7) inside the answer text. Ids belong only in \"citations\"; write the names, "

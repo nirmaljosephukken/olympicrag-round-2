@@ -2,9 +2,9 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 69.2,
-  "full_credit": 27,
-  "status_matches": 41,
+  "accuracy_pct": 82.9,
+  "full_credit": 35,
+  "status_matches": 45,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)"
  },
  "questions": [
@@ -64,58 +64,75 @@
    "qid": "r2-pub-003",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.5,
+   "score": 1.0,
    "facts": [
     [
      "{\"event\": \"Men's Greco-Roman 60 kg\", \"gold\": \"Kenichiro Fumita\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Men's Greco-Roman 77 kg\", \"gold\": \"Nao Kusaka\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Men's freestyle 57 kg\", \"gold\": \"Rei Higuchi\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Men's freestyle 65 kg\", \"gold\": \"Kotaro Kiyooka\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Women's freestyle 53 kg\", \"gold\": \"Akari Fujinami\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Women's freestyle 57 kg\", \"gold\": \"Tsugumi Sakurai\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Women's freestyle 62 kg\", \"gold\": \"Sakura Motoki\"}",
-     0.5
+     1.0
     ],
     [
      "{\"event\": \"Women's freestyle 76 kg\", \"gold\": \"Yuka Kagami\"}",
-     0.5
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.5
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-004",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"year\": 2012, \"gold\": \"Yi Siling\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2016, \"gold\": \"Virginia Thrasher\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2024, \"gold\": \"Ban Hyo-jin\"}",
+     1.0
+    ],
+    [
+     "{\"year\": 2028, \"gold\": \"Brooke Whitford\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-005",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.5,
+   "score": 1.0,
    "facts": [
     [
      "{\"film\": \"Splash\", \"year\": 1984}",
@@ -123,7 +140,7 @@
     ],
     [
      "{\"film\": \"Parenthood\", \"year\": 1989}",
-     0.0
+     1.0
     ],
     [
      "{\"film\": \"Backdraft\", \"year\": 1991}",
@@ -131,11 +148,11 @@
     ],
     [
      "{\"film\": \"Far and Away\", \"year\": 1992}",
-     0.0
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.5
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-006",
@@ -158,30 +175,21 @@
   {
    "qid": "r2-pub-007",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 1.0,
-   "facts": [
-    [
-     "noc=JPN",
-     1.0
-    ],
-    [
-     "golds=9",
-     1.0
-    ]
-   ],
-   "why": "",
-   "deterministic": 1.0
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-008",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.889,
+   "score": 1.0,
    "facts": [
     [
      "count=8",
-     0.0
+     1.0
     ],
     [
      "AUS",
@@ -217,7 +225,7 @@
     ]
    ],
    "why": "",
-   "deterministic": 0.889
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-009",
@@ -457,27 +465,27 @@
    "qid": "r2-pub-014",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.667,
    "facts": [
     [
      "{\"year\": 2004, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2008, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2012, \"event\": \"Women's freestyle 63 kg\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2016, \"event\": \"Women's freestyle 58 kg\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.667
   },
   {
    "qid": "r2-pub-015",
@@ -505,49 +513,49 @@
    "qid": "r2-pub-016",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.667,
    "facts": [
     [
      "{\"year\": 2008, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2008, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2012, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2012, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2016, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ],
     [
      "{\"year\": 2016, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     1.0
+     0.67
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.667
   },
   {
    "qid": "r2-pub-017",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.0,
+   "score": 1.0,
    "facts": [
     [
      "Amistad",
-     0.0
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.0
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-018",
@@ -588,11 +596,16 @@
   {
    "qid": "r2-pub-020",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-021",
@@ -611,6 +624,29 @@
   {
    "qid": "r2-pub-022",
    "gold_status": "answered",
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
+  },
+  {
+   "qid": "r2-pub-023",
+   "gold_status": "answered",
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
+  },
+  {
+   "qid": "r2-pub-024",
+   "gold_status": "answered",
    "status": "answered",
    "score": 0.714,
    "facts": [
@@ -623,50 +659,22 @@
    "deterministic": 0.714
   },
   {
-   "qid": "r2-pub-023",
-   "gold_status": "answered",
-   "status": "answered",
-   "score": 0.536,
-   "facts": [
-    [
-     "text",
-     0.54
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.536
-  },
-  {
-   "qid": "r2-pub-024",
-   "gold_status": "answered",
-   "status": "answered",
-   "score": 0.779,
-   "facts": [
-    [
-     "text",
-     0.78
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.779
-  },
-  {
    "qid": "r2-pub-025",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.0,
+   "score": 1.0,
    "facts": [
     [
      "event=Men's decathlon",
-     0.0
+     1.0
     ],
     [
      "nations=13",
-     0.0
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.0
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-026",
@@ -717,11 +725,11 @@
    "qid": "r2-pub-029",
    "gold_status": "partial",
    "status": "partial",
-   "score": 1.0,
+   "score": 0.8,
    "facts": [
     [
      "{\"year\": 2004, \"gold\": \"Keiji Suzuki\"}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2012, \"gold\": \"Teddy Riner\"}",
@@ -741,16 +749,21 @@
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.8
   },
   {
    "qid": "r2-pub-030",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Ron Howard",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-031",
@@ -827,19 +840,19 @@
    "qid": "r2-pub-035",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.0,
+   "score": 1.0,
    "facts": [
     [
      "event=Women's 50-metre freestyle",
-     0.0
+     1.0
     ],
     [
      "nations=72",
-     0.0
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.0
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-036",
@@ -887,33 +900,43 @@
    "qid": "r2-pub-039",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.408,
+   "score": 0.816,
    "facts": [
     [
      "text",
-     0.41
+     0.82
     ]
    ],
    "why": "",
-   "deterministic": 0.408
+   "deterministic": 0.816
   },
   {
    "qid": "r2-pub-040",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-041",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 0.26,
+   "facts": [
+    [
+     "text",
+     0.26
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.26
   },
   {
    "qid": "r2-pub-042",
@@ -936,16 +959,11 @@
   {
    "qid": "r2-pub-043",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 0.989,
-   "facts": [
-    [
-     "text",
-     0.99
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.989
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-044",
@@ -986,11 +1004,11 @@
   {
    "qid": "r2-pub-046",
    "gold_status": "not_in_corpus",
-   "status": "answered",
-   "score": 0.0,
+   "status": "not_in_corpus",
+   "score": 1.0,
    "facts": [],
-   "why": "gold not_in_corpus, ours answered",
-   "deterministic": 0.0
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-047",
@@ -1040,11 +1058,16 @@
   {
    "qid": "r2-pub-050",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 0.238,
+   "facts": [
+    [
+     "text",
+     0.24
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.238
   }
  ]
 }
