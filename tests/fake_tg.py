@@ -65,15 +65,40 @@ class FakeTG:
                 noc = e[f"{m}_noc"]
                 if noc and (not medal or m == medal):
                     count[noc] = count.get(noc, 0) + 1
-                    events.setdefault(noc, []).append(f"{e['id']}|{e['event']}|{m}")
+                    events.setdefault(noc, []).append(f"{e['id']}|{e['event']}|{m}|{e[m]}")
         return [{"events_found": n, "medals_by_nation": count, "events_by_nation": events}]
+
+    def q_games_events(self, sport_norm, year, season):
+        evs = [e for e in self.events if e["year"] == year and (not season or e["season"] == season)
+               and (not sport_norm or norm(e["sport"]) == sport_norm)]
+        return [{"events": [_v(e["id"], title=e["title"], sport=e["sport"], event=e["event"], year=e["year"],
+                               season=e["season"], nations=e["nations"], competitors=e["competitors"], gold=e["gold"],
+                               gold_noc=e["gold_noc"]) for e in evs]}]
+
+    def q_text_search(self, needle, lim):
+        out = []
+        for c in self.chunks():
+            if needle.lower() in c["text"].lower():
+                out.append(_v(c["id"], doc_id=c["doc_id"], idx=c["idx"], text=c["text"]))
+                if len(out) >= lim:
+                    break
+        return [{"hits": out}]
+
+    def q_doc_chunks(self, doc_id, max_idx):
+        cs = sorted((c for c in self.chunks() if c["doc_id"] == doc_id and c["idx"] <= max_idx), key=lambda c: c["idx"])
+        return [{"doc": [_v(doc_id)]}, {"chunks": [_v(c["id"], idx=c["idx"], text=c["text"]) for c in cs]}]
+
+    def chunks(self):
+        if not hasattr(self, "_chunks"):
+            self._chunks = [json.loads(l) for l in open(BUILD / "chunks.jsonl", encoding="utf-8")]
+        return self._chunks
 
     # --- films and offices
     def q_film_facts(self, title_norm, person_norm, role, year_from, year_to):
         out = []
         for f in self.films:
             credits = [(r, n) for r, ns in f["credits"].items() for n in ns]
-            if person_norm and not any(norm(n) == person_norm and (not role or r == role) for r, n in credits):
+            if person_norm and not any(norm(n) == person_norm and (not role or role in r) for r, n in credits):
                 continue
             if title_norm and title_norm not in norm(f["title"]):
                 continue

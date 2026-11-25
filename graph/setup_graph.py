@@ -258,11 +258,14 @@ def entity_payload() -> tuple[dict, dict]:
                                         "budget_low", "budget_high", "gross_currency", "gross_low", "gross_high",
                                         "gross_note")), "title_norm": {"value": norm(f["title"])}}
         edge("Doc", f["id"], "ABOUT_FILM", "Film", f["id"])
+        roles: dict[str, list[str]] = {}
         for role, names in f["credits"].items():
             for n in names:
                 pid = person(n)
-                if pid:
-                    edge("Film", f["id"], "FILM_CREDIT", "Person", pid, {"role": role})
+                if pid and role not in roles.setdefault(pid, []):
+                    roles[pid].append(role)
+        for pid, rs in roles.items():   # one edge per (film, person); several roles are kept together
+            edge("Film", f["id"], "FILM_CREDIT", "Person", pid, {"role": ",".join(rs)})
     for p in people.values():
         person(p["name"])
         edge("Doc", p["doc_id"], "ABOUT_PERSON", "Person", p["id"])

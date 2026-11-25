@@ -226,31 +226,35 @@ class Harness:
 
 
 ANSWER_RULES = """Answer rules:
-- Use ONLY the evidence given. The corpus is the source of truth, even if you remember otherwise. Every name and
-  number in the answer must be stated in an evidence item you cite (several items may be combined).
-- Answer exactly what is asked, completely: a list must hold every item the evidence supports and nothing else; label
-  list items with what makes them distinct (year, event, medal); a count gives the number and what was counted; a
-  "why" question gives the reason the evidence states.
-- status: "answered" when the evidence answers every part; "partial" when some requested parts are not in the corpus
-  (answer the rest and name the missing parts in "missing"); "not_in_corpus" when the corpus does not contain the
-  answer. Never invent an answer.
+- Use ONLY the evidence. Every name and number in the answer must be stated in an evidence item you cite (several
+  items may be combined). Evidence ids (E3) go in "citations", never in the answer text.
+- Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
+  (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
+  a "why" question gives the reason the evidence states.
+- fact_stated: "yes" if the evidence states every fact the question asks for, "partly" if only some, "no" if none
+  (e.g. the evidence only says it is unknown, anonymous, unverified or not recorded). For a question that asks
+  whether something is established or proven, the fact asked for is that judgement: "yes" when you can give it.
+- status: "answered" when the evidence answers every part; "partial" when some parts are present and others are not in
+  the corpus (answer the present parts, list the absent ones in "missing"); "not_in_corpus" when the specific fact
+  asked for is absent. If the evidence only shows that the asked fact is unknown, anonymous, unverified or not
+  recorded, that fact is not in the corpus: not_in_corpus, or partial when other asked parts are present. A question
+  ASKING whether something is established or proven (e.g. "does X prove Y?") is answered directly: say what the
+  evidence does and does not establish.
 Evidence policy (sources can disagree or change over time):
-- The most authoritative evidence for the time the question asks about wins: signed or official decisions, juries,
-  certificates and registers (source tier 1) outrank operational records such as scoreboards, schedules and feeds
-  (tier 2), which outrank news and newsletters (tier 3), which outrank blogs, fan posts, volunteer or spectator notes,
-  tourism sites and automated emails (tier 4).
-- A later publication does not override a signed decision, and a record that repeats older data does not supersede
-  it. For "as of" questions use what was established or effective at that time; an effective time can differ from the
-  event and publication times.
-- Registrations or entries are not starters or competitors; keep different populations apart.
-- Missing evidence is not a negative fact: no record of something means it is not established, not that it did not
-  happen. Unverified claims stay unverified.
-- Say what was provisional, superseded, disputed or never confirmed, and by which source."""
+- The most authoritative evidence for the time asked wins: tier 1 (signed or official decisions, juries,
+  certificates, registers) > tier 2 (scoreboards, schedules, feeds, logs) > tier 3 (news, newsletters) > tier 4
+  (blogs, fan posts, volunteer or spectator notes, tourism sites, automated emails).
+- A later publication does not override a signed decision; a record that repeats older data does not supersede it.
+  For "as of" questions use what was effective at that time; state the effective time when the evidence gives one.
+- Registrations or entries are not starters or competitors.
+- Missing evidence is not a negative fact: no record means not established, not that it did not happen.
+- State what was provisional, superseded, disputed or never confirmed, and by which source."""
 
 
 def _answer_json(h: Harness, agent: str, question: str, context: str) -> dict:
     prompt = (f"{ANSWER_RULES}\n\nEvidence (each item has an id in brackets):\n{context}\n\n"
-              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, \"status\": \"answered|partial|not_in_corpus\", "
+              f"Question: {question}\n\nReturn JSON: {{\"answer\": str, \"fact_stated\": \"yes|partly|no\", "
+              f"\"status\": \"answered|partial|not_in_corpus\", "
               f"\"missing\": [str], \"explanation\": str, \"citations\": [evidence ids], "
               f"\"confidence\": \"high|medium|low\"}}")
     r = h.llm(agent, prompt, json_mode=True, max_out=900)
@@ -317,57 +321,41 @@ def run_graphrag(tb: Toolbox, qid: str, question: str) -> Result:
 
 
 # ----------------------------------------------------------------------------- 3. Agentic GraphRAG
-ORCH_SYSTEM = """You are the orchestrator of an investigation team answering questions over a TigerGraph
-knowledge graph built from a corpus of Wikipedia articles (Olympic events 1988-2026, plus films and people), fictional
-LA 2028 event articles, and LA 2028 source records (scoreboards, jury decisions, schedules, bulletins, blogs) that each
-state their source and publication time. Some source records are provisional, out of date or wrong.
+ORCH_SYSTEM = """You orchestrate tools over a TigerGraph graph built from a corpus: Wikipedia articles (Olympic events
+1988-2026, films, people), fictional LA 2028 event articles, and LA 2028 source records that state their source and
+publication time (some are provisional, out of date or wrong).
+Graph: Event -IN_GAMES-> Games; -OF_SPORT-> Sport; -AT_VENUE-> Venue; -WON_MEDAL-> Athlete; -NEXT/PREV_EDITION-> Event;
+Doc -HAS_CHUNK-> Chunk(text, vector); SourceRecord -ABOUT_EVENT-> Event; Film -FILM_CREDIT-> Person -HELD-> OfficeTerm.
 
-Graph: Event -IN_GAMES-> Games(year, season); Event -OF_SPORT-> Sport; Event -AT_VENUE-> Venue;
-Event -WON_MEDAL-> Athlete; Event -NEXT_EDITION/PREV_EDITION-> Event (same event at adjacent Games);
-Doc -HAS_CHUNK-> Chunk(text, vector); SourceRecord(source, published) -ABOUT_EVENT-> Event.
-Event attributes: competitors, nations, date, venue, gold/silver/bronze.
-
-Specialised agents you can call (one per turn):
+Tools (one per turn):
 {tools}
 
-Each turn, choose the single most useful next action given the question, the linked entities, the evidence
-so far and what is still missing. Prefer exact graph tools (cheap, precise) and use text search only when the
-graph cannot answer or to verify. Pick the tool that computes what is asked, so you never count or rank yourself:
-- the same athlete winning the same event at several Games: repeat_winners (complete list, with years);
-- nations or competitors per edition of one event across Games, with the most / fewest: participation_by_edition;
-- medals per nation in one sport at one Games (ranking nations, or listing the events a nation won): medal_table;
-- competitor counts of the events of one sport at one Games (most / fewest / over a threshold): aggregate;
-- one athlete's medals across Games: athlete_medals; films (director, cast, music, budget, gross): film_facts;
-  politicians (offices, predecessor, successor): office_succession; "why" questions: read_document / similarity_search;
-- LA 2028 incidents, provisional vs official results, schedules, venues, registrations: source_records (all records
-  about an event, oldest first, each with its source tier and publication time) together with the event article.
-Questions that chain several hops ("held immediately before/after", "two Games earlier", "the event held at VENUE on
-DATE ... at the previous Games") should use multi_hop: one call resolves the start event exactly (event_id, venue + date,
-or sport + year + event) and walks the whole path, e.g. path ["prev"] for "held immediately before YEAR" or ["prev","prev"]
-for two editions back. Answer from the LAST event in the chain. If it reports an ambiguous start, pick one event_id and
-call it again; use edition_hop for a single hop from an event you already have.
-If a call returns nothing, change strategy (relax a filter, other tool) rather than repeating it.
-Facts can have several versions. If the question asks who ORIGINALLY won, who holds a medal after a disqualification,
-when a result changed, or if an event profile reports VERSIONS, call fact_history: it lists the official record, the
-article's statements, what supersedes what and any conflicts. Answer with the version the question asks for (by default
-the current official record); conflicts and changes are reported automatically in notes.
-Stop as soon as the evidence answers the question: action "final_answer" with the answer, its status, the missing
-parts (if partial), a one-sentence explanation and the evidence ids that support it. Never invent facts that are not in
-the evidence. Before answering not_in_corpus, search with at least one suitable tool.
+Choose the most useful next action. Use the tool that computes what is asked; never count, rank or do arithmetic
+yourself: repeat_winners (same event won at several Games), participation_by_edition (one event across Games),
+rank_events (events of one Games by nations/competitors), medal_table (medals per nation, with winners),
+athlete_medals (one athlete's medals), film_facts (films; ratio filters), office_succession (politicians).
+Chains ("held immediately before/after", "two Games earlier"): multi_hop. Changed results: fact_history.
+LA 2028 results, incidents, times, venues, entries: source_records(event_id) gives the event article plus every
+source record about it, in time order with tiers; use it before answering. Reasons ("why"): read_document /
+text_search / similarity_search. A name not found by a graph tool may be mentioned inside another article: text_search.
+If a call returns nothing, change tool or filter. Before not_in_corpus, try similarity_search and a document search
+(find_documents or text_search).
+Stop when the evidence answers the question: action "final_answer".
 
 {rules}
 
 Reply with JSON only:
-{{"reasoning": "<one short sentence>", "action": "<agent name or final_answer>", "args": {{...}},
-  "answer": "<only for final_answer>", "status": "answered|partial|not_in_corpus", "missing": ["<part>", ...],
-  "explanation": "<how the evidence answers it>", "citations": ["E3", ...], "confidence": "high|medium|low"}}"""
+{{"reasoning": "<short>", "action": "<tool or final_answer>", "args": {{...}},
+  "answer": "<final_answer only>", "fact_stated": "yes|partly|no", "status": "answered|partial|not_in_corpus",
+  "missing": ["<part>"],
+  "explanation": "<one sentence>", "citations": ["E3"], "confidence": "high|medium|low"}}"""
 
 TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events": "graph", "event_profile": "graph",
                "edition_hop": "graph", "aggregate": "graph", "athlete_medals": "graph",
                "similarity_search": "vector", "scoped_similarity": "vector", "read_document": "document",
                "find_documents": "document", "fact_history": "graph", "multi_hop": "graph", "source_records": "source",
                "repeat_winners": "graph", "participation_by_edition": "graph", "medal_table": "graph",
-               "film_facts": "graph", "office_succession": "graph"}
+               "film_facts": "graph", "office_succession": "graph", "rank_events": "graph", "text_search": "document"}
 
 
 FEEDBACK = {
@@ -375,7 +363,25 @@ FEEDBACK = {
                    "numbers exactly as the evidence does, drop what no evidence states, or gather it first.",
     "uncited": "Cite the evidence ids that state the answer.",
     "unknown": "Keep investigating with a different tool or filter before giving up.",
+    "ids": "You wrote evidence ids (like E7) inside the answer text. Ids belong only in \"citations\"; write the names, "
+           "values and years themselves in the answer.",
 }
+TEXT_TOOLS = {"find_documents", "text_search", "read_document"}
+KEEP_FULL = 2          # the last N tool observations are shown in full; older ones are shortened
+OLD_OBS_CHARS = 700
+OBS_CHARS = 3500
+
+
+def render_history(history: list[tuple[str, bool]]) -> str:
+    """Investigation log for the orchestrator: recent observations in full, older ones shortened (token budget)."""
+    obs_idx = [i for i, (_, is_obs) in enumerate(history) if is_obs]
+    recent = set(obs_idx[-KEEP_FULL:])
+    out = []
+    for i, (text, is_obs) in enumerate(history):
+        if is_obs and i not in recent and len(text) > OLD_OBS_CHARS:
+            text = text[:OLD_OBS_CHARS] + " ...[shortened]"
+        out.append(text)
+    return "\n".join(out)
 
 
 def ground_args(action: str, args: dict, linked: dict) -> dict:
@@ -398,12 +404,13 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     # the entity linker always runs first: it is cheap (no LLM) and grounds every later decision
     link = tb.entity_linker(question)
     h.observe("entity_linker", "link", {"question": question}, link)
-    history: list[str] = [f"step 1 entity_linker -> {link.summary}"]
-    last_family, last_found, rejections = "link", True, 0
+    history: list[tuple[str, bool]] = [(f"step 1 entity_linker -> {link.summary}", False)]
+    used: set[str] = set()
+    last_family, last_found, rejections, nic_pushbacks = "link", True, 0, 0
     max_rejections = 2
     for step in range(max_steps):
         remaining = max_steps - step
-        prompt = (f"Question: {question}\n\nInvestigation so far:\n" + "\n".join(history) +
+        prompt = (f"Question: {question}\n\nInvestigation so far:\n" + render_history(history) +
                   f"\n\nSteps remaining: {remaining}. "
                   + ("You MUST give final_answer now." if remaining == 1 else "Choose the next action."))
         r = h.llm("orchestrator", prompt, system=system, json_mode=True, max_out=500)
@@ -416,10 +423,12 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         if action == "final_answer" or not action:
             ans, cites, status, missing = answer_fields(d)
             if status == "not_in_corpus":
-                if h.res.tool_calls <= 1 and remaining > 1 and rejections < max_rejections:
-                    rejections += 1   # only the entity linker ran: search before concluding
-                    history.append(f"step {len(history) + 1} evidence_evaluator: search the corpus with a suitable "
-                                   f"tool before concluding not_in_corpus (missing evidence is not a negative fact).")
+                todo = ([] if "similarity_search" in used else ["similarity_search"]) + \
+                       ([] if used & TEXT_TOOLS else ["find_documents or text_search"])
+                if todo and remaining > 2 and nic_pushbacks < 2:
+                    nic_pushbacks += 1   # never conclude not_in_corpus after a single empty search
+                    history.append((f"step {len(history) + 1} evidence_evaluator: before not_in_corpus, also try "
+                                    f"{' and '.join(todo)} (missing evidence is not a negative fact).", False))
                     continue
                 h._trace(tool="evidence_evaluator", tigergraph=False, ok=True, ms=0.0)
                 return not_in_corpus(h, d, cites, "the agent found no evidence that answers the question")
@@ -432,12 +441,13 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
             if rejections >= max_rejections or remaining <= 1:
                 return withhold(h, g)
             rejections += 1
-            history.append(f"step {len(history) + 1} evidence_evaluator REJECTED answer '{ans}': {g.reason}. "
-                           f"{FEEDBACK.get(g.problem, '')}")
+            hint = FEEDBACK["ids"] if re.search(r"\bE\d+\b", g.reason) else FEEDBACK.get(g.problem, "")
+            history.append((f"step {len(history) + 1} evidence_evaluator REJECTED answer '{ans[:300]}': {g.reason}. "
+                            f"{hint}", False))
             continue
         fn = getattr(tb, action, None)
         if action not in TOOL_SPECS or fn is None:
-            history.append(f"step {len(history) + 1} invalid action '{action}'")
+            history.append((f"step {len(history) + 1} invalid action '{action}'", False))
             continue
         try:
             obs = fn(**args)
@@ -448,8 +458,9 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
             h.res.strategy_changes += 1
         last_family, last_found = fam, obs.found
         h.observe(action, action, args, obs, d.get("reasoning", ""))
-        summary = obs.summary if len(obs.summary) < 6000 else obs.summary[:6000] + " ...[truncated]"
-        history.append(f"step {len(history) + 1} {action}({json.dumps(args, ensure_ascii=False)}) -> {summary}")
+        used.add(action)
+        summary = obs.summary if len(obs.summary) < OBS_CHARS else obs.summary[:OBS_CHARS] + " ...[truncated]"
+        history.append((f"step {len(history) + 1} {action}({json.dumps(args, ensure_ascii=False)}) -> {summary}", True))
     # budget exhausted: answer from what we have
     context = "\n".join(f"[{e.id}] ({e.title}) {e.text}" for e in h.ledger.values())
     j = _answer_json(h, "answer_generator", question, context[:24000])
@@ -460,7 +471,7 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     return accept(h, j, ans, cites, missing, "step_budget_exhausted: " + g.reason) if g.ok else withhold(h, g)
 
 
-ANSWER_KEYS = ("answer", "status", "missing", "explanation", "citations", "confidence")
+ANSWER_KEYS = ("answer", "fact_stated", "status", "missing", "explanation", "citations", "confidence")
 NOT_FOUND = {"", "unknown", "none", "n a", "not in corpus", "not in the corpus", "not_in_corpus", "null"}
 
 
@@ -472,8 +483,11 @@ def answer_fields(d: dict) -> tuple[str, list[str], str, list[str]]:
     cites = [str(c) for c in (d.get("citations") or [])] if isinstance(d.get("citations"), list) else []
     missing = [str(m) for m in (d.get("missing") or []) if str(m).strip()] if isinstance(d.get("missing"), list) else []
     status = str(d.get("status") or "").strip().lower()
-    if status == "not_in_corpus" or norm(ans) in NOT_FOUND:
+    stated = str(d.get("fact_stated") or "").strip().lower()
+    if status == "not_in_corpus" or norm(ans) in NOT_FOUND or stated == "no":
         return ans, cites, "not_in_corpus", missing
+    if stated == "partly" and not missing:
+        missing = ["part of what was asked is not stated in the corpus"]
     return ans, cites, "partial" if missing else "answered", missing
 
 
@@ -490,6 +504,9 @@ def not_in_corpus(h: Harness, d: dict, cites: list[str], reason: str) -> Result:
     """The agent concluded the corpus does not answer the question. Cited items (e.g. a record that lists anonymous
     entries) are kept as the evidence for that conclusion."""
     h.res.answer, h.res.status, h.res.confidence = "", "not_in_corpus", d.get("confidence", "")
+    said = d.get("answer")
+    if said and norm(str(said)) not in NOT_FOUND:   # what the agent did find goes into the explanation
+        h.res.notes.append(f"What the corpus does say: {str(said)[:600]}")
     h.res.citations = h.cite(cites)
     h.res.missing = [str(m) for m in (d.get("missing") or [])] if isinstance(d.get("missing"), list) else []
     h.res.explanation = str(d.get("explanation") or "") or reason

@@ -171,7 +171,9 @@ CREATE OR REPLACE QUERY event_editions(STRING sport_norm, STRING event_norm, STR
           E.competitors AS competitors, E.gold AS gold] AS events;
 }
 
-// Round 2: medals per nation in one sport at one Games, counted with accumulators over MEDAL_FOR edges
+// Round 2: medals per nation in one sport at one Games, counted with accumulators over the events' medal fields
+// (one event can give two medals to the same nation, so the NOC attributes are counted, not MEDAL_FOR edges);
+// each entry carries the event and the medallist(s)
 CREATE OR REPLACE QUERY medal_table(STRING sport_norm, INT year, STRING season, STRING medal) FOR GRAPH @GRAPH@ {
   MapAccum<STRING, SumAccum<INT>> @@count;
   MapAccum<STRING, ListAccum<STRING>> @@events;
@@ -179,10 +181,30 @@ CREATE OR REPLACE QUERY medal_table(STRING sport_norm, INT year, STRING season, 
   G = {Games.*};
   G = SELECT g FROM G:g WHERE g.year == year AND (season == "" OR g.season == season);
   E = SELECT e FROM G:g -(IN_GAMES)- Event:e WHERE sport_norm == "" OR e.sport_norm == sport_norm
-      ACCUM @@n_events += 1;
-  N = SELECT n FROM E:e -(MEDAL_FOR:m)- Nation:n WHERE medal == "" OR m.medal == medal
-      ACCUM @@count += (n.id -> 1), @@events += (n.id -> e.id + "|" + e.event + "|" + m.medal);
+      ACCUM @@n_events += 1,
+            IF (medal == "" OR medal == "gold") AND e.gold_noc != "" THEN
+              @@count += (e.gold_noc -> 1), @@events += (e.gold_noc -> e.id + "|" + e.event + "|gold|" + e.gold) END,
+            IF (medal == "" OR medal == "silver") AND e.silver_noc != "" THEN
+              @@count += (e.silver_noc -> 1), @@events += (e.silver_noc -> e.id + "|" + e.event + "|silver|" + e.silver) END,
+            IF (medal == "" OR medal == "bronze") AND e.bronze_noc != "" THEN
+              @@count += (e.bronze_noc -> 1), @@events += (e.bronze_noc -> e.id + "|" + e.event + "|bronze|" + e.bronze) END;
   PRINT @@n_events AS events_found, @@count AS medals_by_nation, @@events AS events_by_nation;
+}
+
+// Round 2: every event of one sport (or all sports) at one Games with its counts and winners, for ranking in code
+CREATE OR REPLACE QUERY games_events(STRING sport_norm, INT year, STRING season) FOR GRAPH @GRAPH@ {
+  G = {Games.*};
+  G = SELECT g FROM G:g WHERE g.year == year AND (season == "" OR g.season == season);
+  E = SELECT e FROM G:g -(IN_GAMES)- Event:e WHERE sport_norm == "" OR e.sport_norm == sport_norm;
+  PRINT E[E.title AS title, E.sport AS sport, E.event AS event, E.year AS year, E.season AS season,
+          E.nations AS nations, E.competitors AS competitors, E.gold AS gold, E.gold_noc AS gold_noc] AS events;
+}
+
+// Round 2: exact phrase search over all chunk text (case-insensitive), e.g. a film title inside a person's article
+CREATE OR REPLACE QUERY text_search(STRING needle, INT lim) FOR GRAPH @GRAPH@ {
+  C = {Chunk.*};
+  C = SELECT c FROM C:c WHERE lower(c.text) LIKE "%" + lower(needle) + "%" LIMIT lim;
+  PRINT C[C.doc_id AS doc_id, C.idx AS idx, C.text AS text] AS hits;
 }
 
 // Round 2: films by title, by a credited person (director, starring, music, ...) and/or by release year range
@@ -193,7 +215,7 @@ CREATE OR REPLACE QUERY film_facts(STRING title_norm, STRING person_norm, STRING
   IF person_norm != "" THEN
     P = {Person.*};
     P = SELECT p FROM P:p WHERE p.id == person_norm;
-    F = SELECT f FROM P:p -(FILM_CREDIT:c)- Film:f WHERE role == "" OR c.role == role;
+    F = SELECT f FROM P:p -(FILM_CREDIT:c)- Film:f WHERE role == "" OR c.role LIKE "%" + role + "%";
   END;
   F = SELECT f FROM F:f
       WHERE (title_norm == "" OR f.title_norm LIKE "%" + title_norm + "%")

@@ -101,3 +101,62 @@ def test_source_records_in_time_order_with_tiers(tb):
     utc = [r["published_utc"] for r in o.data]
     assert utc == sorted(utc) and len(o.data) == len(tb.tg.records)
     assert all("(tier " in e.text for e in o.evidence)
+
+
+def test_rank_events_ties_and_missing():
+    evs = [{"event": "A", "id": "1", "nations": 13}, {"event": "B", "id": "2", "nations": 14},
+           {"event": "C", "id": "3", "nations": 14}, {"event": "D", "id": "4", "nations": -1}]
+    r = crossgames.rank_events(evs)
+    assert r["max"] == {"value": 14, "events": ["B", "C"]} and r["min"] == {"value": 13, "events": ["A"]}
+    assert r["missing"] == ["D"]
+
+
+def test_film_ratio_needs_same_currency():
+    f = {"budget_currency": "USD", "gross_currency": "USD", "budget_low": 10e6, "budget_high": 20e6,
+         "gross_low": 30e6, "gross_high": 30e6}
+    assert crossgames.film_ratio(f) == (1.5, 3.0)
+    assert crossgames.film_ratio({**f, "gross_currency": "INR"}) is None
+
+
+def test_mentions_event_by_name_with_sport_or_by_distinctive_venue_word():
+    ev = {"event": "Women's sprint", "sport": "Cycling", "venue": "Dominguez Velodrome"}
+    assert crossgames.mentions_event("Cycling bulletin: women's sprint heats", ev)
+    assert crossgames.mentions_event("Doors open early at Dominguez today", ev)
+    assert not crossgames.mentions_event("Women's sprint (canoe) results", ev)
+    assert not crossgames.mentions_event("New seats at the velodrome", ev)
+    assert crossgames.mentions_event("Shooting: 30 lined up in the 50 m rifle", {"event": "Men's 50 metre rifle"
+                                     if False else "50 metre rifle", "sport": "Shooting", "venue": ""})
+
+
+@needs_build
+def test_rank_events_tool_on_corpus(tb):
+    o = tb.rank_events("Sailing", 2008, "Summer")
+    vals = [r["value"] for r in o.data["rows"]]
+    assert vals == sorted(vals, reverse=True) and "MOST:" in o.summary and "FEWEST:" in o.summary
+
+
+@needs_build
+def test_medal_table_lists_winners(tb):
+    o = tb.medal_table("Sailing", 2008, "Summer")
+    assert " - " in o.evidence[0].text   # event - medallist
+
+
+@needs_build
+def test_film_ratio_filter_in_code_and_text_fallback(tb):
+    o = tb.film_facts(person="Tony Scott", role="director", ratio_below=2)
+    assert "(computed in code)" in o.summary
+    keep = [f for f in o.data if f["ratio"] and f["ratio"][1] < 2]
+    assert all(f["title"] in o.summary for f in keep)
+    miss = tb.film_facts(title="Top Gun")   # not an article of its own here: falls back to a text search
+    assert miss.found and "Text search" in miss.summary
+
+
+@needs_build
+def test_one_credit_edge_keeps_every_role_of_a_person():
+    # a director who also produced the film must stay findable as director (one edge per film-person pair)
+    from graph.setup_graph import entity_payload
+    from agr.parse import norm
+    V, E = entity_payload()
+    film = next(i for i, v in V["Film"].items() if v["title"]["value"] == "The Terminal")
+    role = E["Film"][film]["FILM_CREDIT"]["Person"][norm("Steven Spielberg")]["role"]["value"]
+    assert set(role.split(",")) == {"director", "producer"}

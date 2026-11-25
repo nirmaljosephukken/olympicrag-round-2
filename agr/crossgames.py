@@ -60,3 +60,48 @@ def medal_counts(medals_by_nation: dict, events_by_nation: dict) -> list[dict]:
             rank, prev = i, r["medals"]
         r["rank"] = rank
     return rows
+
+
+def rank_events(events: list[dict], field: str = "nations") -> dict:
+    """Events of one Games ranked by a count (desc); the events with the most and fewest (ties kept); events whose
+    count is not stated are listed apart, never ranked."""
+    rows = [{"event": e.get("event") or e.get("title", ""), "event_id": e.get("id", ""), "value": e.get(field, -1)}
+            for e in events]
+    known = sorted((r for r in rows if isinstance(r["value"], int) and r["value"] >= 0),
+                   key=lambda r: (-r["value"], r["event"]))
+    if not known:
+        return {"field": field, "rows": [], "max": None, "min": None, "missing": [r["event"] for r in rows]}
+    hi, lo = known[0]["value"], known[-1]["value"]
+    return {"field": field, "rows": known,
+            "max": {"value": hi, "events": [r["event"] for r in known if r["value"] == hi]},
+            "min": {"value": lo, "events": [r["event"] for r in known if r["value"] == lo]},
+            "missing": sorted(r["event"] for r in rows if r not in known)}
+
+
+def film_ratio(f: dict) -> tuple[float, float] | None:
+    """gross / budget as (low, high) when both are known in the same currency; ranges give a range."""
+    if not f.get("budget_currency") or f.get("budget_currency") != f.get("gross_currency"):
+        return None
+    if (f.get("budget_low") or 0) <= 0 or (f.get("gross_low") is None) or f["gross_low"] < 0:
+        return None
+    return f["gross_low"] / f["budget_high"], f["gross_high"] / f["budget_low"]
+
+
+GENERIC_VENUE_WORDS = {"stadium", "arena", "park", "centre", "center", "hall", "field", "court", "course", "pool",
+                       "olympic", "national", "international", "aquatics", "aquatic", "sports", "beach", "street",
+                       "range", "venue", "club", "complex", "memorial", "dome", "pavilion", "velodrome"}
+
+
+def mentions_event(text: str, ev: dict) -> bool:
+    """Does a record's text name this event (its event name as a phrase) or its venue (the full venue name, or a
+    distinctive venue word of 6+ letters such as 'coliseum')?"""
+    import re
+    t = re.sub(r"\b(\d+) m\b", r"\1 metre", norm(text))   # '10 m air pistol' names the '10 metre' event
+    has = lambda p: bool(p) and re.search(r"(?<![a-z0-9])" + re.escape(p) + r"(?![a-z0-9])", t) is not None
+    if has(norm(ev.get("event", ""))) and has(norm(ev.get("sport", "")).split(" ")[0]):
+        return True
+    venue = norm(ev.get("venue", ""))
+    if has(venue):
+        return True
+    words = [w for w in venue.split() if len(w) >= 6 and w not in GENERIC_VENUE_WORDS]
+    return any(has(w) for w in words)

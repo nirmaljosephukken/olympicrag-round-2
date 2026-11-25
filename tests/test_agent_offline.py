@@ -57,9 +57,34 @@ def test_invented_name_is_rejected_then_withheld(tb, monkeypatch):
 
 def test_not_in_corpus_needs_a_search_first_and_partial_needs_missing(tb, monkeypatch):
     nic = {"action": "final_answer", "answer": "", "status": "not_in_corpus", "explanation": "no such event"}
-    script(monkeypatch, [nic, {"action": "graph_search", "args": {"sport": "Athletics", "year": 2028}}, nic])
+    script(monkeypatch, [nic, {"action": "graph_search", "args": {"sport": "Athletics", "year": 2028}}, nic,
+                         {"action": "similarity_search", "args": {"query": "made-up event 2028"}},
+                         {"action": "text_search", "args": {"phrase": "made-up event"}}, nic])
     r = pipelines.run_agentic(tb, "t3", "Who won the made-up event at the 2028 Summer Olympics?")
-    assert r.status == "not_in_corpus" and r.tool_calls == 2 and run.answer_line(r)["answer"] is None
+    assert r.status == "not_in_corpus" and r.tool_calls == 4 and run.answer_line(r)["answer"] is None
     assert pipelines.answer_fields({"answer": "A", "status": "partial", "missing": []})[2] == "answered"
     assert pipelines.answer_fields({"answer": "A", "status": "answered", "missing": ["2008"]})[2] == "partial"
     assert pipelines.answer_fields({"answer": "unknown", "status": "answered"})[2] == "not_in_corpus"
+    assert pipelines.answer_fields({"answer": "No duration is recorded", "status": "answered",
+                                    "fact_stated": "no"})[2] == "not_in_corpus"
+    assert pipelines.answer_fields({"answer": "A, B", "status": "answered", "fact_stated": "partly"})[2] == "partial"
+
+
+def test_rejected_answer_with_evidence_ids_gets_an_explicit_hint(tb, monkeypatch):
+    seen = []
+    replies = iter([{"action": "medal_table", "args": {"sport": "Sailing", "year": 2008, "season": "Summer"}},
+                    {"action": "final_answer", "answer": "E1 and E2", "status": "answered", "citations": ["E1"]},
+                    {"action": "final_answer", "answer": "GBR", "status": "answered", "citations": ["E1"]}])
+
+    def gen(prompt, **k):
+        seen.append(prompt)
+        return LLMResult(json.dumps(next(replies)), 100, 5, 1.0, "fake")
+    monkeypatch.setattr(pipelines, "generate", gen)
+    r = pipelines.run_agentic(tb, "t4", "Sailing golds by nation at the 2008 Summer Olympics?")
+    assert r.status == "answered" and "Ids belong only" in seen[-1]
+
+
+def test_history_keeps_recent_observations_in_full():
+    h = [("step 1 link", False)] + [(f"step {i} obs " + "x" * 2000, True) for i in range(2, 6)]
+    out = pipelines.render_history(h).split("\n")
+    assert [len(l) > 1500 for l in out] == [False, False, False, True, True]

@@ -15,6 +15,7 @@ Method (deterministic, no LLM, the default):
       - a long free-text gold answer ("why" questions) is scored by content-word recall (credit = min(1, recall/0.7)).
     For gold `partial` answers the status itself is one more fact (our status must be `partial`).
   * question score = mean credit of its facts; accuracy_pct = mean question score x 100.
+  Number words in the answer count as digits ('eight' = 8).
   Extra wrong list items are not penalised by this matcher (the official scorer does penalise them).
 With --judge, an LLM judge (same provider as the system) re-scores questions whose deterministic score is below 1,
 and the higher of the two scores is kept.
@@ -37,6 +38,28 @@ STOP = set("a an the of in at on to for and or but by with from as is was were b
 
 def _txt(v) -> str:
     return norm(str(v))
+
+
+UNITS = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "         "seventeen eighteen nineteen".split()
+TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+
+
+def digits(text: str) -> str:
+    """Number words to digits in a normalised answer ('eight' -> '8', 'twenty two' -> '22'), so a count written
+    in words is matched like one written in digits."""
+    w, out, i = text.split(), [], 0
+    while i < len(w):
+        if w[i] in TENS:
+            n = TENS[w[i]]
+            if i + 1 < len(w) and w[i + 1] in UNITS[1:10]:
+                n += UNITS.index(w[i + 1]); i += 1
+            out.append(str(n))
+        elif w[i] in UNITS:
+            out.append(str(UNITS.index(w[i])))
+        else:
+            out.append(w[i])
+        i += 1
+    return " ".join(out)
 
 
 def _found(value, text_n: str) -> list[int]:
@@ -112,7 +135,7 @@ def score_one(q: dict, a: dict | None) -> dict:
     if s == "not_in_corpus":
         return {"score": 0.0, "facts": [], "why": "answered not_in_corpus"}
     ans = a.get("answer")
-    text_n = _txt(ans if isinstance(ans, str) else json.dumps(ans, ensure_ascii=False))
+    text_n = digits(_txt(ans if isinstance(ans, str) else json.dumps(ans, ensure_ascii=False)))
     fs = facts(q.get("answer"), text_n)
     if gs == "partial":
         fs.append(("status=partial", 1.0 if s == "partial" else 0.0))
