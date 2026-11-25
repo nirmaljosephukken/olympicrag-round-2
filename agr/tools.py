@@ -705,47 +705,31 @@ class Toolbox:
                            (time.time() - t0) * 1000, sum(len(x.text) for x in ev) // 4)
 
 
-TOOL_SPECS = {
-    "entity_linker": "(question) -> years, season, sport, venue, date phrase and exact event titles found in the text",
-    "graph_search": "(sport, year, season, venue, date, event, limit) -> events from the graph matching all given "
-                    "filters; 'event' is the event name e.g. \"Men's 20 kilometres walk\" (omit unknown filters)",
-    "venue_events": "(venue, date, year) -> events held at a venue, ranked by date match, with gold medallists; "
-                    "pass the date text exactly as written in the question",
-    "event_profile": "(event_id) -> full facts of one event + medallists + previous/next edition ids",
-    "edition_hop": "(event_id, direction='prev'|'next', hops=1) -> the same event at the previous/next Games",
-    "multi_hop": "(path=['prev',...], event_id | venue+date+year | sport+year+season+event) -> multi-hop reasoning: "
-                 "resolves ONE start event exactly, then walks the planned hops along the edition chain, returning the "
-                 "event (with medallists) reached at every hop; reports an ambiguous start instead of guessing",
-    "aggregate": "(sport, year, season, threshold) -> exact count of events with competitors > threshold, "
-                 "max competitors and which event(s) have it, full per-event table",
-    "similarity_search": "(query, k=6) -> top-k text chunks from the whole corpus (vector search)",
-    "scoped_similarity": "(query, doc_ids, k=4) -> vector search only inside the given documents",
-    "fact_history": "(event_id or title) -> every version of the event's facts: the official record, article statements, "
-                    "result changes after the event (disqualifications, reallocations, with dates), what supersedes "
-                    "what, and conflicts",
-    "find_documents": "(query) -> article titles that best match the query (use when the graph has no event for it)",
-    "read_document": "(doc_id, max_chunks=2, contains='') -> opening chunks of one article, or only its chunks that "
-                     "contain a keyword such as 'Gold'",
-    "athlete_medals": "(name) -> events where an athlete won gold/silver/bronze, with medal counts computed exactly",
-    "source_records": "(event_id='', published_before='') -> with event_id: the event article's opening passages plus "
-                      "every source record linked to the event or naming it; otherwise all source records (scoreboards, jury decisions, schedules, "
-                      "bulletins, blogs, emails) with their source and publication time, oldest first: those about one "
-                      "event, or all of them, optionally only those published before a UTC time 'YYYY-MM-DD HH:MM:SS'; "
-                      "each with its reliability tier (1 official record, 2 operational, 3 news/media, 4 informal)",
-    "repeat_winners": "(sport='', season='', medal='gold', min_games=2, individual_only=false) -> every athlete who won the same event at "
-                      "min_games or more Games, with the years (complete list, computed in code)",
-    "participation_by_edition": "(event, sport='', season='', field='nations'|'competitors') -> the count at every "
-                                "edition of one event in the corpus, with the editions holding the max and min",
-    "medal_table": "(sport, year, season='', medal='gold'|'silver'|'bronze'|'') -> medals per nation in one sport at "
-                   "one Games, ranked, with each nation's events and medallists (counted in GSQL)",
-    "film_facts": "(title='', person='', role='', year_from=-1, year_to=-1, ratio_below=0, ratio_above=0) -> films "
-                  "from their infoboxes: release date, director, cast, music, budget, gross, gross/budget; ratio_below / "
-                  "ratio_above filter by gross/budget in code; role is director, starring, music, cinematography, "
-                  "producer, writer or editing; if no film article exists, searches the title in all articles",
-    "rank_events": "(sport, year, season='', field='nations'|'competitors') -> every event of a sport at one Games "
-                   "ranked by that count, with the most / fewest event(s) (ties kept), ranked in code",
-    "text_search": "(phrase, k=8) -> passages of any article that contain the exact phrase (case-insensitive): a "
-                   "film, person or event mentioned inside another article",
-    "office_succession": "(name='', office='') -> offices a person held (term dates, predecessor, successor, linked "
-                         "previous/next terms), or every holder of an office",
+TOOL_SPECS = {   # what the orchestrator sees: signature -> what comes back (kept short: it is sent on every call)
+    "graph_search": "(sport, year, season, venue, date, event, limit) -> events matching the filters (omit unknown ones)",
+    "venue_events": "(venue, date, year) -> events at a venue ranked by date match (date text as in the question)",
+    "event_profile": "(event_id) -> one event's facts, medallists, prev/next edition, versions, source-record count",
+    "edition_hop": "(event_id, direction='prev'|'next', hops=1) -> the same event at an adjacent Games",
+    "multi_hop": "(path=['prev'|'next',...], event_id | venue+date+year | sport+year+season+event) -> resolves one "
+                 "start event, walks the hops, returns the event at every hop",
+    "aggregate": "(sport, year, season, threshold) -> count of a Games' events with competitors > threshold",
+    "rank_events": "(sport, year, season='', field='nations'|'competitors') -> a Games' events ranked, most/fewest",
+    "medal_table": "(sport, year, season='', medal='gold'|'silver'|'bronze'|'') -> medals per nation, with events "
+                   "and medallists",
+    "repeat_winners": "(sport='', season='', medal='gold', min_games=2, individual_only=false) -> athletes who won "
+                      "the same event at several Games, with years",
+    "participation_by_edition": "(event, sport='', season='', field='nations'|'competitors') -> count per edition "
+                                "of one event, max/min",
+    "athlete_medals": "(name) -> an athlete's medal events and counts",
+    "fact_history": "(event_id) -> versions of an event's facts: official record, result changes, conflicts",
+    "source_records": "(event_id='', published_before='') -> event article + its source records (time order, "
+                      "tier 1 official > 2 operational > 3 news > 4 informal); without event_id: all records",
+    "film_facts": "(title='', person='', role='', year_from=-1, year_to=-1, ratio_below=0, ratio_above=0) -> films: "
+                  "release, director, cast, music, budget, gross, gross/budget (filters computed in code)",
+    "office_succession": "(name='', office='') -> offices held, terms, predecessor, successor",
+    "text_search": "(phrase, k=8) -> passages of any article containing the exact phrase",
+    "find_documents": "(query) -> article titles matching the query",
+    "read_document": "(doc_id, max_chunks=2, contains='') -> an article's opening passages, or those containing a word",
+    "similarity_search": "(query, k=5) -> most similar passages in the whole corpus",
+    "scoped_similarity": "(query, doc_ids, k=4) -> similar passages inside the given documents",
 }
