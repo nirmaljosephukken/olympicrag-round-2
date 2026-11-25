@@ -169,3 +169,15 @@ def test_entity_linker_finds_people_athletes_and_films(tb):
     assert any(p["name"] == "Ben Ainslie" for p in o.data["people"])
     o = tb.entity_linker("Who scored the music for True Romance?")
     assert any(f["name"] == "True Romance" for f in o.data["films"])
+
+
+@needs_build
+def test_event_name_passed_as_sport_still_finds_events(tb):
+    import json
+    from tests.fake_tg import BUILD
+    events = json.loads((BUILD / "events.json").read_text(encoding="utf-8"))
+    tb.catalog = lambda: {"sports": sorted({e["sport"] for e in events}), "venues": [], "events": {}}
+    o = tb.graph_search(sport="Men's javelin throw", year=2008)
+    assert o.found and all("javelin" in e["title"].lower() for e in o.data)
+    p = tb.participation_by_edition("Men's javelin throw", sport="javelin throw")
+    assert p.found and "(gold:" in p.summary

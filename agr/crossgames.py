@@ -39,7 +39,8 @@ def participation(events: list[dict], field: str = "nations") -> dict:
     """events: editions of one event with year / nations / competitors -> rows by year, max and min editions
     (ties kept), and the editions without a count (reported, never guessed)."""
     rows = sorted(({"year": e["year"], "season": e.get("season", ""), "value": e.get(field, -1),
-                    "event_id": e.get("id", ""), "title": e.get("title", "")} for e in events),
+                    "event_id": e.get("id", ""), "title": e.get("title", ""), "gold": e.get("gold", "")}
+                   for e in events),
                   key=lambda r: r["year"])
     known = [r for r in rows if isinstance(r["value"], int) and r["value"] >= 0]
     hi = max((r["value"] for r in known), default=None)

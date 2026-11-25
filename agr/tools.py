@@ -168,9 +168,21 @@ class Toolbox:
         return self._names_index()
 
     # ------------------------------------------------------------ graph agents
+    def _split_sport(self, sport: str, event: str = "") -> tuple[str, str]:
+        """(sport, event): a value passed as `sport` that is not a sport in the catalogue (e.g. "10 metre air rifle")
+        is used as the event name instead, so the call still finds the events."""
+        try:
+            sports = {norm(s) for s in self.catalog()["sports"]}
+        except Exception:
+            return sport, event
+        if sport and norm(sport) not in sports:
+            return "", event or sport
+        return sport, event
+
     def graph_search(self, sport: str = "", year: int = -1, season: str = "", venue: str = "", date: str = "",
                      event: str = "", limit: int = 40) -> Observation:
         t0 = time.time()
+        sport, event = self._split_sport(sport, event)
         m = TITLE_RE.match(event or "")
         if m:  # a full article title was passed as the event name: use its parts
             sport, year, season, event = sport or m.group("sport"), int(year or -1) if year not in (None, "", -1) \
@@ -500,17 +512,20 @@ class Toolbox:
 
     # ------------------------------------------------------------ cross-Games (Round 2)
     def repeat_winners(self, sport: str = "", season: str = "", medal: str = "gold", min_games: int = 2,
-                       individual_only: bool = False) -> Observation:
+                       individual_only: bool = False, event: str = "") -> Observation:
         """Athletes who won the same event (same sport + event name + season) at min_games or more Games;
         individual_only drops crew / team events (doubles, pairs, relays, team, boats ...: agr.parse.CREW_EVENT).
         Rows come from the athlete_medal_rows query; grouping is done in code (agr.crossgames)."""
         t0 = time.time()
+        sport, event = self._split_sport(sport, event)
         r = self.tg.query("athlete_medal_rows", {"sport_norm": norm(sport), "season": season or "",
                                                  "medal": (medal or "").lower()})
         rows = [{"name": a["attributes"]["name"], "rows": a["attributes"]["rows"]} for a in r[0]["athletes"]]
         reps = crossgames.repeat_winners(rows, int(min_games or 2))
         if str(individual_only).lower() in ("true", "1", "yes"):
             reps = [g for g in reps if not CREW_EVENT.search(g["event"])]
+        if event:   # only one event (by name)
+            reps = [g for g in reps if event_phrase_match(event, norm(g["event"]))]
         self.counter += 1
         text = (f"athletes with {medal or 'a medal'} in the same event at {min_games}+ Games"
                 f"{' in ' + sport if sport else ''}{' (' + season + ')' if season else ''}: {len(reps)}. " +
@@ -529,6 +544,7 @@ class Toolbox:
         m = TITLE_RE.match(event or "")
         if m:
             sport, season, event = sport or m.group("sport"), season or m.group("season"), m.group("event")
+        sport, _ = self._split_sport(sport)
         field = field if field in ("nations", "competitors") else "nations"
         r = self.tg.query("event_editions", {"sport_norm": norm(sport), "event_norm": norm(event),
                                              "season": season or ""})
@@ -540,7 +556,8 @@ class Toolbox:
                                f"with sport", [], False, {"sports": sports}, (time.time() - t0) * 1000)
         p = crossgames.participation(evs, field)
         self.counter += 1
-        table = "; ".join(f"{x['year']}: {x['value'] if x['value'] >= 0 else 'not stated'}" for x in p["rows"])
+        table = "; ".join(f"{x['year']}: {x['value'] if x['value'] >= 0 else 'not stated'}"
+                          + (f" (gold: {x['gold']})" if x.get("gold") else "") for x in p["rows"])
         text = (f"{field} per edition of {sport + ' ' if sport else ''}{event}{' (' + season + ')' if season else ''}: "
                 f"{len(p['rows'])} editions in the corpus. {table}." +
                 (f" Most: {p['max']['value']} in {', '.join(map(str, p['max']['years']))}; fewest: {p['min']['value']} "
@@ -748,8 +765,8 @@ TOOL_SPECS = {   # what the orchestrator sees: signature -> what comes back (kep
                    "and medallists",
     "repeat_winners": "(sport='', season='', medal='gold', min_games=2, individual_only=false) -> athletes who won "
                       "the same event at several Games, with years",
-    "participation_by_edition": "(event, sport='', season='', field='nations'|'competitors') -> count per edition "
-                                "of one event, max/min",
+    "participation_by_edition": "(event, sport='', season='', field='nations'|'competitors') -> every edition "
+                                "of one event: count and gold medallist per year, max/min",
     "athlete_medals": "(name) -> an athlete's medal events and counts",
     "fact_history": "(event_id) -> versions of an event's facts: official record, result changes, conflicts",
     "source_records": "(event_id='', published_before='') -> event article + its source records (time order, "

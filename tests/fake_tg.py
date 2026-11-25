@@ -68,6 +68,14 @@ class FakeTG:
                     events.setdefault(noc, []).append(f"{e['id']}|{e['event']}|{m}|{e[m]}")
         return [{"events_found": n, "medals_by_nation": count, "events_by_nation": events}]
 
+    def q_find_events(self, sport_norm, year, season, venue_norm, date_norm, event_norm, lim):
+        evs = [e for e in self.events if (year <= 0 or e["year"] == year) and (not season or e["season"] == season)
+               and (not sport_norm or norm(e["sport"]) == sport_norm)
+               and (not venue_norm or venue_norm in norm(e["venue"])) and (not event_norm or event_norm in norm(e["event"]))]
+        return [{"events": [_v(e["id"], title=e["title"], sport=e["sport"], year=e["year"], season=e["season"],
+                               venue=e["venue"], date=e["date"], competitors=e["competitors"], nations=e["nations"],
+                               gold=e["gold"]) for e in evs[:lim]]}]
+
     def q_games_events(self, sport_norm, year, season):
         evs = [e for e in self.events if e["year"] == year and (not season or e["season"] == season)
                and (not sport_norm or norm(e["sport"]) == sport_norm)]
