@@ -135,3 +135,21 @@ def test_rag_baseline_writes_a_round2_line(tb, monkeypatch):
     line = run.answer_line(r)
     assert line["status"] == "not_in_corpus" and line["answer"] is None
     assert [s["query"] for s in line["trace"] if s["tigergraph"]] == ["chunk_search"]
+
+
+def test_evidence_id_passed_as_event_id_is_resolved():
+    from agr.tools import Evidence
+    ledger = {"E73": Evidence("E73", "graph", "SYN-X-020", "Some event", "text"),
+              "E9": Evidence("E9", "aggregate", "A1,A2", "agg", "text")}
+    assert pipelines.resolve_evidence_ids({"event_id": "E73"}, ledger) == {"event_id": "SYN-X-020"}
+    assert pipelines.resolve_evidence_ids({"doc_id": "[E9]"}, ledger) == {"doc_id": "A1"}
+    assert pipelines.resolve_evidence_ids({"event_id": "Q123"}, ledger) == {"event_id": "Q123"}
+
+
+def test_uncited_answer_is_cited_from_gathered_evidence_and_citations_are_pruned(tb, monkeypatch):
+    script(monkeypatch, [{"action": "medal_table", "args": {"sport": "Sailing", "year": 2008, "season": "Summer"}},
+                         {"action": "graph_search", "args": {"sport": "Sailing", "year": 2008, "event": "Finn"}},
+                         {"action": "final_answer", "answer": "GBR won 4 golds.", "status": "answered",
+                          "citations": []}])
+    r = pipelines.run_agentic(tb, "t8", "Sailing golds by nation at the 2008 Summer Olympics?")
+    assert r.status == "answered" and r.citations and r.citations[0]["evidence"] == "E1"

@@ -190,12 +190,12 @@ class Toolbox:
         r = self.tg.query("find_events", {"sport_norm": norm(sport), "year": int(year or -1), "season": season or "",
                                           "venue_norm": norm(venue), "date_norm": "", "event_norm": norm(event),
                                           "lim": 2000})
-        evs = [_attrs(v) for v in r[0]["events"]]
+        evs = sorted((_attrs(v) for v in r[0]["events"]), key=lambda e: (e.get("year", 0), e.get("title", "")))
         if event:
             ev_part = lambda e: norm(e["title"].split(" – ")[-1])  # the event name after the dash
             exact = [e for e in evs if ev_part(e) == norm(event)]
             evs = exact or [e for e in evs if event_phrase_match(event, norm(e["title"]))]
-        if date:
+        if date:   # stable sort: equal date scores keep the year / title order above
             evs = sorted(evs, key=lambda e: -date_score(date, e.get("date", "")))
         evs = evs[:limit]
         ev = [self._event_fact(e) for e in evs]
@@ -608,12 +608,26 @@ class Toolbox:
                       title=f"rank_events({sport}, {year} {season}, {field})", text=text)
         return Observation("rank_events", f"[{ev.id}] {text}", [ev], bool(evs), rk, (time.time() - t0) * 1000)
 
-    def text_search(self, phrase: str, k: int = 8, max_chars: int = 700) -> Observation:
+    def text_search(self, phrase: str, k: int = 6, max_chars: int = 700) -> Observation:
         """Exact phrase search (case-insensitive) over the text of every document, e.g. a film title or a person's
-        name mentioned inside another article. Returns the matching passages, centred on the phrase."""
+        name mentioned inside another article. Returns the matching passages, centred on the phrase: at most one per
+        document, the documents that mention the phrase most often first (ties by document id), so the same search
+        always returns the same passages."""
         t0 = time.time()
-        r = self.tg.query("text_search", {"needle": str(phrase or "").strip(), "lim": int(k)})
-        hits = [_attrs(h) for h in r[0]["hits"]] if r else []
+        needle = str(phrase or "").strip()
+        r = self.tg.query("text_search", {"needle": needle, "lim": 300})
+        allhits = [_attrs(h) for h in r[0]["hits"]] if r else []
+        per_doc = {}
+        for h in allhits:
+            n = h["text"].lower().count(needle.lower())
+            best = per_doc.get(h["doc_id"])
+            if best is None or (n, -int(h.get("idx", 0))) > (best[0], -int(best[1].get("idx", 0))):
+                per_doc[h["doc_id"]] = (n, h)
+        doc_total = {}
+        for h in allhits:
+            doc_total[h["doc_id"]] = doc_total.get(h["doc_id"], 0) + h["text"].lower().count(needle.lower())
+        hits = [h for _, h in sorted(per_doc.values(), key=lambda x: (-doc_total[x[1]["doc_id"]], x[1]["doc_id"]))]
+        hits = hits[:int(k)]
         ev = []
         for h in hits:
             txt = h["text"]
@@ -621,7 +635,9 @@ class Toolbox:
             start = max(0, i - max_chars // 2) if i >= 0 else 0
             x = self._ev("chunk", h["doc_id"], ("..." if start else "") + txt[start:start + max_chars])
             ev.append(x)
-        summ = f"{len(ev)} passage(s) containing '{phrase}':" + "".join(f"\n[{x.id}] ({x.title}) {x.text}" for x in ev)
+        summ = (f"{len(ev)} passage(s) containing '{phrase}' (one per document, most mentions first"
+                + (f"; {len(per_doc)} documents in all" if len(per_doc) > len(ev) else "") + "):"
+                + "".join(f"\n[{x.id}] ({x.title}) {x.text}" for x in ev))
         return Observation("text_search", summ, ev, bool(ev), hits, (time.time() - t0) * 1000,
                            sum(len(x.text) for x in ev) // 4)
 

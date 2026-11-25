@@ -181,3 +181,10 @@ def test_event_name_passed_as_sport_still_finds_events(tb):
     assert o.found and all("javelin" in e["title"].lower() for e in o.data)
     p = tb.participation_by_edition("Men's javelin throw", sport="javelin throw")
     assert p.found and "(gold:" in p.summary
+
+
+@needs_build
+def test_text_search_is_deterministic_and_one_passage_per_document(tb):
+    a, b = tb.text_search("Ben Ainslie"), tb.text_search("Ben Ainslie")
+    assert [e.doc_id for e in a.evidence] == [e.doc_id for e in b.evidence]
+    assert len({e.doc_id for e in a.evidence}) == len(a.evidence)

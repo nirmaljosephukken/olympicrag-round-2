@@ -412,6 +412,22 @@ def render_history(history: list[tuple[str, bool]]) -> str:
     return "\n".join(out)
 
 
+ID_ARGS = ("event_id", "doc_id")
+
+
+def resolve_evidence_ids(args: dict, ledger: dict) -> dict:
+    """The agent sometimes passes an evidence id ('E73') where a document or event id is expected; it is replaced by
+    the document that evidence item came from (the first one for an aggregate)."""
+    if not isinstance(args, dict):
+        return args
+    out = dict(args)
+    for k in ID_ARGS:
+        v = str(out.get(k, "")).strip("[] ")
+        if re.fullmatch(r"E\d+", v) and v in ledger and ledger[v].doc_id:
+            out[k] = str(ledger[v].doc_id).split(",")[0]
+    return out
+
+
 def ground_args(action: str, args: dict, linked: dict) -> dict:
     """Argument grounding: keep tool arguments faithful to the question text.
     If the orchestrator shortened the question's date phrase, restore the verbatim phrase the linker found
@@ -448,6 +464,7 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         if action == "final_answer" and isinstance(args, dict):
             d = {**{k: args[k] for k in ANSWER_KEYS if k in args}, **{k: v for k, v in d.items() if v}}
         args = ground_args(action, args, link.data)
+        args = resolve_evidence_ids(args, h.ledger)
         h.log_llm_step("orchestrator", f"decide:{action}", r, d.get("reasoning", ""), args)
         if action == "final_answer" or not action:
             ans, cites, status, missing = answer_fields(d)
@@ -483,7 +500,13 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
                     a2, c2, s2, m2 = answer_fields(d2)
                     if s2 != "not_in_corpus" and h.ground(a2, c2).ok:
                         d, ans, cites, status, missing = d2, a2, c2, s2, m2
+            if not cites and h.ledger:   # no citations given: cite the gathered items that state the answer
+                found = grounding.check(ans, list(h.ledger.values()), question)
+                if found.ok:
+                    cites = list(found.supporting)
             g = h.ground(ans, cites)
+            if g.ok and g.supporting:      # cite selectively: keep the items that state part of the answer
+                cites = [c for c in cites if str(c).strip("[]") in set(g.supporting)] or cites
             h.res.steps.append(Step(len(h.res.steps) + 1, "evidence_evaluator", "check_grounding",
                                     {"answer": ans, "citations": cites}, h.res.grounding, g.ok, 0.0))
             h._trace(tool="evidence_evaluator", tigergraph=False, ok=g.ok, ms=0.0)
