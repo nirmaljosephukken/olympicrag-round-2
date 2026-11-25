@@ -127,3 +127,11 @@ def test_completeness_gap_lists_left_out_rows():
     assert "2008" in pipelines.completeness_gap(h, "2000: 14 nations; 2004: 16 nations", ["E3"])
     assert pipelines.completeness_gap(h, "2000: 14; 2004: 16; 2008: 16", ["E3"]) == ""
     assert pipelines.completeness_gap(h, "anything", ["E9"]) == ""
+
+
+def test_rag_baseline_writes_a_round2_line(tb, monkeypatch):
+    script(monkeypatch, [{"answer": "", "asked_parts": [{"part": "winner", "stated": False}], "citations": []}])
+    r = pipelines.run_rag(tb, "b1", "Who won the made-up race?")
+    line = run.answer_line(r)
+    assert line["status"] == "not_in_corpus" and line["answer"] is None
+    assert [s["query"] for s in line["trace"] if s["tigergraph"]] == ["chunk_search"]

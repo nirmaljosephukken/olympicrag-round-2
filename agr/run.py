@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 from agr import llm, tg
-from agr.pipelines import run_agentic
+from agr.pipelines import PIPELINES, run_agentic
 from agr.tools import Toolbox
 
 NOT_FOUND = {"", "unknown", "none", "n/a", "not in corpus", "not_in_corpus"}
@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("answers")
     ap.add_argument("--fresh", action="store_true", help="overwrite the answers file instead of resuming")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--pipeline", default="agentic", choices=["agentic", "rag", "graphrag"],
+                    help="agentic (the submitted system) or a one-call baseline for comparison")
     a = ap.parse_args()
 
     qs = [json.loads(l) for l in open(a.questions, encoding="utf-8") if l.strip()]
@@ -87,7 +89,7 @@ def main() -> int:
         tg.CONTEXT["qid"] = q["qid"]
         llm.WAITS["in_question_s"] = 0.0
         try:
-            r = run_agentic(tb, q["qid"], q["question"])
+            r = PIPELINES[a.pipeline](tb, q["qid"], q["question"])
         except RuntimeError as e:
             if "daily quota" in str(e):
                 print(f"[run] stopping: {e}. Re-run the same command later to resume.", flush=True)

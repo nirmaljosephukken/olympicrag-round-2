@@ -279,15 +279,25 @@ def _answer_json(h: Harness, agent: str, question: str, context: str) -> dict:
     return j
 
 
+def baseline_answer(h: Harness, j: dict) -> None:
+    """One-pass baselines: the answer, status and citations as the model gave them (status by the same code rules
+    as the agent); the grounding check is recorded, not enforced, so the baseline is measured as it is."""
+    ans, cites, status, missing = answer_fields(j)
+    h.res.status, h.res.missing = status, missing
+    h.res.answer = "" if status == "not_in_corpus" else ans
+    h.res.confidence, h.res.explanation = j.get("confidence", ""), str(j.get("explanation") or "")
+    h.res.citations = h.cite(cites)
+    if status != "not_in_corpus":
+        h.ground(ans, cites)
+
+
 # ----------------------------------------------------------------------------- 1. RAG
 def run_rag(tb: Toolbox, qid: str, question: str, k: int | None = None) -> Result:
     h = Harness(qid, "rag", question)
     obs = tb.similarity_search(question, k=k or SETTINGS.rag_k)
     h.observe("similarity_search", "chunk_search", {"k": k or SETTINGS.rag_k}, obs)
     j = _answer_json(h, "answer_generator", question, obs.summary)
-    h.res.answer, h.res.confidence = str(j.get("answer", "")), j.get("confidence", "")
-    h.res.citations = h.cite(j.get("citations", []))
-    h.ground(h.res.answer, j.get("citations", []))
+    baseline_answer(h, j)
     h.res.stop_reason = "single_pass"
     return h.finish()
 
@@ -329,9 +339,7 @@ def run_graphrag(tb: Toolbox, qid: str, question: str) -> Result:
         h.observe("similarity_search", "chunk_search(fallback)", {"k": 6}, sc)
     context = "\n".join(f"[{e.id}] ({e.title}) {e.text}" for e in h.ledger.values())
     j = _answer_json(h, "answer_generator", question, context)
-    h.res.answer, h.res.confidence = str(j.get("answer", "")), j.get("confidence", "")
-    h.res.citations = h.cite(j.get("citations", []))
-    h.ground(h.res.answer, j.get("citations", []))
+    baseline_answer(h, j)
     h.res.stop_reason = "single_pass"
     return h.finish()
 
