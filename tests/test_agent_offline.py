@@ -61,7 +61,7 @@ def test_not_in_corpus_needs_a_search_first_and_partial_needs_missing(tb, monkey
                          {"action": "similarity_search", "args": {"query": "made-up event 2028"}},
                          {"action": "text_search", "args": {"phrase": "made-up event"}}, nic])
     r = pipelines.run_agentic(tb, "t3", "Who won the made-up event at the 2028 Summer Olympics?")
-    assert r.status == "not_in_corpus" and r.tool_calls == 4 and run.answer_line(r)["answer"] is None
+    assert r.status == "not_in_corpus" and r.tool_calls == 5 and run.answer_line(r)["answer"] is None
     assert pipelines.answer_fields({"answer": "A", "status": "partial", "missing": []})[2] == "answered"
     assert pipelines.answer_fields({"answer": "A", "status": "answered", "missing": ["2008"]})[2] == "partial"
     assert pipelines.answer_fields({"answer": "unknown", "status": "answered"})[2] == "not_in_corpus"
@@ -103,3 +103,27 @@ def test_evidence_ids_in_the_answer_text_move_to_citations():
     ans, cites, _, _ = pipelines.answer_fields({"answer": "GBR won 4 [E1]", "citations": ["E2"]})
     assert ans == "GBR won 4" and cites == ["E2", "E1"]
     assert pipelines.strip_evidence_ids("Event 2028") == ("Event 2028", [])
+
+
+def test_auto_search_plan_uses_names_and_short_forms():
+    plan = pipelines.auto_search_plan("Why was Jonas Halvorsen absent from the 1996 sprint final?", set())
+    assert ("text_search", {"phrase": "Jonas Halvorsen", "k": 4}) in plan
+    assert ("text_search", {"phrase": "Halvorsen", "k": 4}) in plan
+    assert plan[-1][0] == "similarity_search"
+    assert pipelines.auto_search_plan("Who won?", {"similarity_search"}) == []
+
+
+def test_not_in_corpus_triggers_automatic_searches_first(tb, monkeypatch):
+    nic = {"action": "final_answer", "answer": "", "status": "not_in_corpus"}
+    script(monkeypatch, [{"action": "graph_search", "args": {"sport": "Sailing", "year": 2008}}, nic, nic])
+    r = pipelines.run_agentic(tb, "t6", "Who directed the film Top Gun?")
+    assert r.status == "not_in_corpus"
+    assert any(s.agent == "auto_search" and s.action == "text_search" for s in r.steps)
+
+
+def test_completeness_gap_lists_left_out_rows():
+    h = pipelines.Harness("t7", "agentic", "q")
+    h.required["E3"] = ("editions", ["2000", "2004", "2008"])
+    assert "2008" in pipelines.completeness_gap(h, "2000: 14 nations; 2004: 16 nations", ["E3"])
+    assert pipelines.completeness_gap(h, "2000: 14; 2004: 16; 2008: 16", ["E3"]) == ""
+    assert pipelines.completeness_gap(h, "anything", ["E9"]) == ""

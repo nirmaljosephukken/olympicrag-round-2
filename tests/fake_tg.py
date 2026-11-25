@@ -75,6 +75,10 @@ class FakeTG:
                                season=e["season"], nations=e["nations"], competitors=e["competitors"], gold=e["gold"],
                                gold_noc=e["gold_noc"]) for e in evs]}]
 
+    def q_chunk_search(self, qv, k):
+        """No vectors offline: an empty result with the real query's shape."""
+        return [{"hits": []}, {"distances": {}}]
+
     def q_text_search(self, needle, lim):
         out = []
         for c in self.chunks():

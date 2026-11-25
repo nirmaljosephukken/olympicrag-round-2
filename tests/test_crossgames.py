@@ -160,3 +160,12 @@ def test_one_credit_edge_keeps_every_role_of_a_person():
     film = next(i for i, v in V["Film"].items() if v["title"]["value"] == "The Terminal")
     role = E["Film"][film]["FILM_CREDIT"]["Person"][norm("Steven Spielberg")]["role"]["value"]
     assert set(role.split(",")) == {"director", "producer"}
+
+
+@needs_build
+def test_entity_linker_finds_people_athletes_and_films(tb):
+    tb.catalog = lambda: {"sports": [], "venues": [], "events": {}}
+    o = tb.entity_linker("What did Tony Scott direct, and did Ben Ainslie win in 2008?")
+    assert any(p["name"] == "Ben Ainslie" for p in o.data["people"])
+    o = tb.entity_linker("Who scored the music for True Romance?")
+    assert any(f["name"] == "True Romance" for f in o.data["films"])

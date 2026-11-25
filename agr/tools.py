@@ -134,8 +134,38 @@ class Toolbox:
             date = m.group(1).strip()
         res = {"years": years, "season": season, "sports": sports[:3], "venues": venues[:3], "date_phrase": date,
                "exact_event_titles": [{"event_id": i, "title_norm": t} for t, i in titles[:3]]}
+        named = self.names_index()
+        hits = [(n, info) for n, info in named.items() if re.search(r"(?<![a-z0-9])" + re.escape(n) + r"(?![a-z0-9])", q)]
+        hits = [(n, i) for n, i in hits if not any(n != o and n in o for o, _ in hits)]   # longest names only
+        res["people"] = [i for _, i in hits if i["kind"] in ("person", "athlete")][:4]
+        res["films"] = [i for _, i in hits if i["kind"] == "film"][:3]
         return Observation("entity_linker", json.dumps(res, ensure_ascii=False), [], bool(any(res.values())),
                            res, (time.time() - t0) * 1000)
+
+    @lru_cache(maxsize=1)
+    def _names_index(self) -> dict:
+        """Names a question can mention, from the parsed build data: people with an article, every medallist and
+        every film title (normalised name -> what it is and where to read about it). Two-word names at least, or a
+        film title of 5+ letters, so common words never link."""
+        out = {}
+        b = ROOT / "build"
+        load = lambda f: json.loads((b / f).read_text(encoding="utf-8")) if (b / f).exists() else []
+        for e in load("events.json"):
+            for m in ("gold", "silver", "bronze"):
+                for n in split_names(e.get(m, "")):
+                    if len(n.split()) >= 2 and len(n) <= 40:
+                        out.setdefault(norm(n), {"kind": "athlete", "name": n})
+        for p in load("people.json"):
+            if len(p["name"].split()) >= 2:
+                out[norm(p["name"])] = {"kind": "person", "name": p["name"], "doc_id": p["doc_id"]}
+        for f in load("films.json"):
+            name = f.get("name") or f["title"]
+            if len(norm(name)) >= 5:
+                out[norm(name)] = {"kind": "film", "name": name, "doc_id": f["id"], "year": f.get("year")}
+        return out
+
+    def names_index(self) -> dict:
+        return self._names_index()
 
     # ------------------------------------------------------------ graph agents
     def graph_search(self, sport: str = "", year: int = -1, season: str = "", venue: str = "", date: str = "",

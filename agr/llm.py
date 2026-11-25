@@ -34,6 +34,7 @@ OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/
 _lock = threading.Lock()
 RPM = int(os.getenv("LLM_RPM", "15" if SETTINGS.llm_provider == "gemini" else "0"))  # per key; 0 = no limit
 WAITS = {"in_question_s": 0.0}
+SEED = int(os.getenv("LLM_SEED", "7"))   # fixed sampling seed (Gemini, OpenAI) with temperature 0: fewer run-to-run changes
 
 
 # One or more Gemini keys: GEMINI_API_KEYS=key1,key2 and/or GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3 ...
@@ -174,7 +175,7 @@ class LLMResult:
 # ----------------------------------------------------------------------------- providers
 def _gemini(prompt, system, model, json_mode, temperature, max_out, key=0):
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_out}}
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_out, "seed": SEED}}
     if system:
         body["systemInstruction"] = {"parts": [{"text": system}]}
     if json_mode:
@@ -212,7 +213,7 @@ def _anthropic(prompt, system, model, json_mode, temperature, max_out, key=0):
 
 def _openai(prompt, system, model, json_mode, temperature, max_out, key=0):
     msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
-    body = {"model": model, "messages": msgs, "max_completion_tokens": max_out}
+    body = {"model": model, "messages": msgs, "max_completion_tokens": max_out, "seed": SEED}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     r = requests.post(OPENAI_URL, json=body, timeout=120, headers={"Authorization": f"Bearer {SETTINGS.openai_key}"})

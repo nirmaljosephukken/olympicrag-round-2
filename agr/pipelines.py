@@ -122,6 +122,7 @@ class Harness:
         self.ledger: dict[str, Evidence] = {}
         self.ties: list[list[dict]] = []   # groups of events that match the question equally well
         self.versions: dict[str, dict] = {}  # event id -> fact_history data (conflicts, changes)
+        self.required: dict[str, tuple[str, list[str]]] = {}  # evidence id -> (what, items a full answer names)
         self.t0 = time.time()
         take_calls()  # drop calls made before this question started (e.g. catalogue warm-up)
 
@@ -131,6 +132,10 @@ class Harness:
     def observe(self, agent: str, action: str, args: dict, obs: Observation, reasoning: str = "", llm=None):
         for e in obs.evidence:
             self.ledger[e.id] = e
+        if obs.evidence and obs.tool == "participation_by_edition" and isinstance(obs.data, dict):
+            self.required[obs.evidence[0].id] = ("editions", [str(r["year"]) for r in obs.data.get("rows", [])])
+        if obs.evidence and obs.tool == "repeat_winners" and isinstance(obs.data, list) and len(obs.data) <= 30:
+            self.required[obs.evidence[0].id] = ("athletes", [g["athlete"] for g in obs.data])
         if obs.tool == "fact_history" and isinstance(obs.data, dict):
             self.versions[obs.data["event"]] = obs.data
         if obs.tool == "event_profile" and isinstance(obs.data, dict) and \
@@ -231,7 +236,8 @@ ANSWER_RULES = """Answer rules:
   items may be combined). Evidence ids (E3) go in "citations", never in the answer text. Write names as the
   evidence writes them (a nation given as a code such as JPN stays JPN, not a country name you supply).
 - Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
-  (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
+  (year, event, medal, winner; when listing medals, state the medal type on every item); a count gives the number
+  and what was counted; write numbers as digits (8, not eight);
   a "why" question gives the reason the evidence states.
 - When sources disagree, or the question asks whether one source supersedes or establishes something, name the
   sources involved with their key facts (what each says, its source type, its date or effective time) and say which
@@ -419,7 +425,7 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
     h.observe("entity_linker", "link", {"question": question}, link)
     history: list[tuple[str, bool]] = [(f"step 1 entity_linker -> {link.summary}", False)]
     used: set[str] = set()
-    last_family, last_found, rejections, nic_pushbacks = "link", True, 0, 0
+    last_family, last_found, rejections, nic_pushbacks, auto_searched = "link", True, 0, 0, False
     max_rejections = 2
     for step in range(max_steps):
         remaining = max_steps - step
@@ -436,6 +442,21 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         if action == "final_answer" or not action:
             ans, cites, status, missing = answer_fields(d)
             if status == "not_in_corpus":
+                if not auto_searched and remaining > 1:
+                    # minimum effort before not_in_corpus, done in code: every name in the question (and its last
+                    # word, a surname or short form) is searched in the text of all articles, plus a similarity search
+                    auto_searched = True
+                    for obs_args in auto_search_plan(question, used):
+                        name, kwargs = obs_args
+                        obs = getattr(tb, name)(**kwargs)
+                        h.observe("auto_search", name, kwargs, obs, "minimum search before not_in_corpus")
+                        used.add(name)
+                        summ = obs.summary if len(obs.summary) < 1500 else obs.summary[:1500] + " ...[truncated]"
+                        history.append((f"step {len(history) + 1} {name}({json.dumps(kwargs, ensure_ascii=False)}) "
+                                        f"[automatic search before not_in_corpus] -> {summ}", True))
+                    history.append((f"step {len(history) + 1} evidence_evaluator: automatic searches above were run "
+                                    f"before accepting not_in_corpus; answer from them if they hold the fact.", False))
+                    continue
                 todo = ([] if "similarity_search" in used else ["similarity_search"]) + \
                        ([] if used & TEXT_TOOLS else ["find_documents or text_search"])
                 if todo and remaining > 2 and nic_pushbacks < 2:
@@ -449,6 +470,11 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
             h.res.steps.append(Step(len(h.res.steps) + 1, "evidence_evaluator", "check_grounding",
                                     {"answer": ans, "citations": cites}, h.res.grounding, g.ok, 0.0))
             h._trace(tool="evidence_evaluator", tigergraph=False, ok=g.ok, ms=0.0)
+            gap = completeness_gap(h, ans, cites)
+            if g.ok and gap and rejections < max_rejections and remaining > 1:
+                rejections += 1
+                history.append((f"step {len(history) + 1} evidence_evaluator: INCOMPLETE answer: {gap}", False))
+                continue
             if g.ok:
                 return accept(h, d, ans, cites, missing, "evidence_sufficient: " + g.reason)
             if rejections >= max_rejections or remaining <= 1:
@@ -482,6 +508,34 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
         return not_in_corpus(h, j, cites, "step budget exhausted without evidence that answers the question")
     g = h.ground(ans, cites)
     return accept(h, j, ans, cites, missing, "step_budget_exhausted: " + g.reason) if g.ok else withhold(h, g)
+
+
+def auto_search_plan(question: str, used: set[str]) -> list[tuple[str, dict]]:
+    """Searches run in code before not_in_corpus is accepted: each name in the question (and, for a multi-word name,
+    its last word: a surname or the short form of a title) as an exact phrase, then a similarity search."""
+    plan, seen = [], set()
+    for n in grounding.names_in(question)[:3]:
+        for v in [n] + ([n.split()[-1]] if len(n.split()) > 1 and len(n.split()[-1]) >= 5 else []):
+            if norm(v) not in seen:
+                seen.add(norm(v))
+                plan.append(("text_search", {"phrase": v, "k": 4}))
+    if "similarity_search" not in used:
+        plan.append(("similarity_search", {"query": question, "k": 4}))
+    return plan[:5]
+
+
+def completeness_gap(h: Harness, ans: str, cites: list[str]) -> str:
+    """When the answer cites a full table from a tool (every edition of an event, every repeat winner), every row
+    must appear in the answer. Returns what is left out, or ''."""
+    for c in cites:
+        c = str(c).strip("[]")
+        if c in h.required:
+            what, items = h.required[c]
+            left = [x for x in items if not grounding._contains(ans, x)]
+            if left:
+                return (f"the cited table [{c}] lists {len(items)} {what} but the answer leaves out "
+                        f"{', '.join(left[:12])}. Include every row, each labelled, or say why one is excluded.")
+    return ""
 
 
 ANSWER_KEYS = ("answer", "asked_parts", "fact_stated", "status", "missing", "explanation", "citations",
