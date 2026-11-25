@@ -226,21 +226,29 @@ class Harness:
 
 
 ANSWER_RULES = """Answer rules:
-- Use only the evidence; every name and number in the answer must be in an item you cite. Ids (E3) go in
-  "citations", never in the answer.
-- Answer completely: lists hold every supported item and nothing else, each labelled (year, event, medal, winner);
-  counts give the number (as digits) and what was counted; "why" gives the stated reason.
-- fact_stated: "yes" if the evidence states every fact asked, "partly" if some, "no" if none (it only says the fact
-  is unknown, anonymous, unverified or not recorded). For "is X established/proven?" questions the judgement is the
-  fact: "yes" when you can give it.
-- status: "answered" (all parts), "partial" (some parts; list the absent ones in "missing"), "not_in_corpus" (the
-  asked fact is absent). Never invent.
-Evidence policy: the most authoritative evidence for the time asked wins: tier 1 (signed/official decisions, juries,
-certificates, registers) > tier 2 (scoreboards, schedules, feeds, logs) > tier 3 (news) > tier 4 (blogs, fans,
-volunteers, tourism sites, automated emails). A later publication does not override a signed decision, and repeating
-older data does not supersede it. "As of" a time: use what was effective then; state effective times when given.
-Registrations are not starters. Missing evidence is not a negative fact. Say what was provisional, superseded,
-disputed or unconfirmed, and by which source."""
+- Use ONLY the evidence. Every name and number in the answer must be stated in an evidence item you cite (several
+  items may be combined). Evidence ids (E3) go in "citations", never in the answer text.
+- Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
+  (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
+  a "why" question gives the reason the evidence states.
+- fact_stated: "yes" if the evidence states every fact the question asks for, "partly" if only some, "no" if none
+  (e.g. the evidence only says it is unknown, anonymous, unverified or not recorded). For a question that asks
+  whether something is established or proven, the fact asked for is that judgement: "yes" when you can give it.
+- status: "answered" when the evidence answers every part; "partial" when some parts are present and others are not in
+  the corpus (answer the present parts, list the absent ones in "missing"); "not_in_corpus" when the specific fact
+  asked for is absent. If the evidence only shows that the asked fact is unknown, anonymous, unverified or not
+  recorded, that fact is not in the corpus: not_in_corpus, or partial when other asked parts are present. A question
+  ASKING whether something is established or proven (e.g. "does X prove Y?") is answered directly: say what the
+  evidence does and does not establish.
+Evidence policy (sources can disagree or change over time):
+- The most authoritative evidence for the time asked wins: tier 1 (signed or official decisions, juries,
+  certificates, registers) > tier 2 (scoreboards, schedules, feeds, logs) > tier 3 (news, newsletters) > tier 4
+  (blogs, fan posts, volunteer or spectator notes, tourism sites, automated emails).
+- A later publication does not override a signed decision; a record that repeats older data does not supersede it.
+  For "as of" questions use what was effective at that time; state the effective time when the evidence gives one.
+- Registrations or entries are not starters or competitors.
+- Missing evidence is not a negative fact: no record means not established, not that it did not happen.
+- State what was provisional, superseded, disputed or never confirmed, and by which source."""
 
 
 def _answer_json(h: Harness, agent: str, question: str, context: str) -> dict:
@@ -314,24 +322,33 @@ def run_graphrag(tb: Toolbox, qid: str, question: str) -> Result:
 
 # ----------------------------------------------------------------------------- 3. Agentic GraphRAG
 ORCH_SYSTEM = """You orchestrate tools over a TigerGraph graph built from a corpus: Wikipedia articles (Olympic events
-1988-2026, films, people), fictional LA 2028 event articles, and LA 2028 source records with a source and publication
-time (some provisional, out of date or wrong). Entities in the question are linked for you (step 1).
+1988-2026, films, people), fictional LA 2028 event articles, and LA 2028 source records that state their source and
+publication time (some are provisional, out of date or wrong).
+Graph: Event -IN_GAMES-> Games; -OF_SPORT-> Sport; -AT_VENUE-> Venue; -WON_MEDAL-> Athlete; -NEXT/PREV_EDITION-> Event;
+Doc -HAS_CHUNK-> Chunk(text, vector); SourceRecord -ABOUT_EVENT-> Event; Film -FILM_CREDIT-> Person -HELD-> OfficeTerm.
 
 Tools (one per turn):
 {tools}
 
-Use the tool that computes what is asked; never count, rank or do arithmetic yourself. Chains ("held immediately
-before/after", "two Games earlier"): multi_hop. Changed results: fact_history. LA 2028 results, incidents,
-times, venues or entries: call source_records(event_id) before answering. A name a graph tool does not find may be
-mentioned inside another article: text_search. If a call returns nothing, change tool or filter. Before
-not_in_corpus, try similarity_search and a document search. Stop when the evidence answers: action "final_answer".
+Choose the most useful next action. Use the tool that computes what is asked; never count, rank or do arithmetic
+yourself: repeat_winners (same event won at several Games), participation_by_edition (one event across Games),
+rank_events (events of one Games by nations/competitors), medal_table (medals per nation, with winners),
+athlete_medals (one athlete's medals), film_facts (films; ratio filters), office_succession (politicians).
+Chains ("held immediately before/after", "two Games earlier"): multi_hop. Changed results: fact_history.
+LA 2028 results, incidents, times, venues, entries: source_records(event_id) gives the event article plus every
+source record about it, in time order with tiers; use it before answering. Reasons ("why"): read_document /
+text_search / similarity_search. A name not found by a graph tool may be mentioned inside another article: text_search.
+If a call returns nothing, change tool or filter. Before not_in_corpus, try similarity_search and a document search
+(find_documents or text_search).
+Stop when the evidence answers the question: action "final_answer".
 
 {rules}
 
 Reply with JSON only:
 {{"reasoning": "<short>", "action": "<tool or final_answer>", "args": {{...}},
   "answer": "<final_answer only>", "fact_stated": "yes|partly|no", "status": "answered|partial|not_in_corpus",
-  "missing": ["<part>"], "explanation": "<one sentence>", "citations": ["E3"], "confidence": "high|medium|low"}}"""
+  "missing": ["<part>"],
+  "explanation": "<one sentence>", "citations": ["E3"], "confidence": "high|medium|low"}}"""
 
 TOOL_FAMILY = {"entity_linker": "link", "graph_search": "graph", "venue_events": "graph", "event_profile": "graph",
                "edition_hop": "graph", "aggregate": "graph", "athlete_medals": "graph",
