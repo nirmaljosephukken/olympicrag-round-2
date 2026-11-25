@@ -78,8 +78,13 @@ def names_in(answer: str) -> list[str]:
     return out
 
 
+LIST_MARKER = re.compile(r"(?:^|(?<=[\s:;,]))(?:\(\d{1,2}\)|\d{1,2}[.)](?=\s))")
+
+
 def numbers_in(answer: str) -> list[str]:
-    return [n.rstrip(".,").replace(",", "") for n in NUM_RE.findall(answer or "")]
+    """Numbers the answer claims, without list markers such as '(3)', '3)' or '3. ' that only number its items."""
+    text = LIST_MARKER.sub(" ", answer or "")
+    return [n.rstrip(".,").replace(",", "") for n in NUM_RE.findall(text)]
 
 
 def _has_number(text: str, n: str) -> bool:

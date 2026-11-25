@@ -102,3 +102,9 @@ def test_round2_names_from_the_question_are_not_new_claims():
     rec = ev("E10", "Stadium scoreboard capture", "3. Jérôme Dufresnoy (BEL) 10.04 (provisional)", kind="source")
     assert check("Jérôme Dufresnoy (BEL), shown at 10.04 on the provisional stadium screen", [rec],
                  "Who was third on the Stadium screen?").ok
+
+
+def test_list_markers_are_not_claimed_numbers():
+    from agr.grounding import numbers_in
+    assert numbers_in("Winners: (1) A - 9.79, (2) B; 3) C in 2016; 4. D") == ["9.79", "2016"]
+    assert check("Michael Phelps (1) and Erik Vendt (2)", [PHELPS], Q_GOLD).ok
