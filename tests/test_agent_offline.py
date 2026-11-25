@@ -61,7 +61,7 @@ def test_not_in_corpus_needs_a_search_first_and_partial_needs_missing(tb, monkey
                          {"action": "similarity_search", "args": {"query": "made-up event 2028"}},
                          {"action": "text_search", "args": {"phrase": "made-up event"}}, nic])
     r = pipelines.run_agentic(tb, "t3", "Who won the made-up event at the 2028 Summer Olympics?")
-    assert r.status == "not_in_corpus" and r.tool_calls == 5 and run.answer_line(r)["answer"] is None
+    assert r.status == "not_in_corpus" and r.tool_calls == 6 and run.answer_line(r)["answer"] is None
     assert pipelines.answer_fields({"answer": "A", "status": "partial", "missing": []})[2] == "answered"
     assert pipelines.answer_fields({"answer": "A", "status": "answered", "missing": ["2008"]})[2] == "partial"
     assert pipelines.answer_fields({"answer": "unknown", "status": "answered"})[2] == "not_in_corpus"
@@ -109,8 +109,8 @@ def test_auto_search_plan_uses_names_and_short_forms():
     plan = pipelines.auto_search_plan("Why was Jonas Halvorsen absent from the 1996 sprint final?", set())
     assert ("text_search", {"phrase": "Jonas Halvorsen", "k": 4}) in plan
     assert ("text_search", {"phrase": "Halvorsen", "k": 4}) in plan
-    assert plan[-1][0] == "similarity_search"
-    assert pipelines.auto_search_plan("Who won?", {"similarity_search"}) == []
+    assert plan[-2][0] == "similarity_search" and plan[-1][0] == "source_records"
+    assert pipelines.auto_search_plan("Who won?", {"similarity_search", "source_records"}) == []
 
 
 def test_not_in_corpus_triggers_automatic_searches_first(tb, monkeypatch):

@@ -139,6 +139,7 @@ class Toolbox:
         hits = [(n, i) for n, i in hits if not any(n != o and n in o for o, _ in hits)]   # longest names only
         res["people"] = [i for _, i in hits if i["kind"] in ("person", "athlete")][:4]
         res["films"] = [i for _, i in hits if i["kind"] == "film"][:3]
+        res["events"] = self.event_candidates(q, years, sports)
         return Observation("entity_linker", json.dumps(res, ensure_ascii=False), [], bool(any(res.values())),
                            res, (time.time() - t0) * 1000)
 
@@ -166,6 +167,32 @@ class Toolbox:
 
     def names_index(self) -> dict:
         return self._names_index()
+
+    def event_candidates(self, qn: str, years: list[int], sports: list[str], limit: int = 5) -> list[dict]:
+        """Events the question names: an event name of 2+ words other than a bare gender word ("women's omnium",
+        "men's 100 metres") as a phrase in the normalised question, kept only for the years and sports the question
+        also names (when it names any); longest names first. Gives the agent event ids before any text search."""
+        idx = self.event_index()
+        if not idx:
+            return []
+        by_name: dict[str, list[tuple[str, dict]]] = {}
+        for eid, e in idx.items():
+            by_name.setdefault(norm(e["event"]), []).append((eid, e))
+        hits = [n for n in by_name if len(n.split()) >= 2 and n.split()[-1] not in ("s", "men", "women")
+                and re.search(r"(?<![a-z0-9])" + re.escape(n) + r"(?![a-z0-9])", qn)]
+        hits = [n for n in hits if not any(n != o and n in o for o in hits)]     # longest names only
+        out = []
+        for n in sorted(hits, key=len, reverse=True):
+            for eid, e in sorted(by_name[n], key=lambda x: (x[1]["year"], x[1]["sport"])):
+                if years and e["year"] not in years:
+                    continue
+                if sports and norm(e["sport"]) not in {norm(s) for s in sports}:
+                    continue
+                out.append({"event_id": eid, "title": self.docs.get(eid, {}).get("title", e["event"]),
+                            "source_records": e.get("records", 0)})
+        if len(out) > limit and not years:
+            return []       # the name alone is too ambiguous across Games: let the agent filter
+        return out[:limit]
 
     # ------------------------------------------------------------ graph agents
     def _split_sport(self, sport: str, event: str = "") -> tuple[str, str]:

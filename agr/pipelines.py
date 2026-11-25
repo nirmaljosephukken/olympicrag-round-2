@@ -354,7 +354,8 @@ Doc -HAS_CHUNK-> Chunk(text, vector); SourceRecord -ABOUT_EVENT-> Event; Film -F
 Tools (one per turn):
 {tools}
 
-Choose the most useful next action. Use the tool that computes what is asked; never count, rank or do arithmetic
+Choose the most useful next action. If the entity linker lists events, start from those event ids
+(event_profile, source_records) before any text search. Use the tool that computes what is asked; never count, rank or do arithmetic
 yourself: repeat_winners (same event won at several Games), participation_by_edition (one event across Games),
 rank_events (events of one Games by nations/competitors), medal_table (medals per nation, with winners),
 athlete_medals (one athlete's medals), film_facts (films; ratio filters), office_succession (politicians).
@@ -605,7 +606,9 @@ def auto_search_plan(question: str, used: set[str]) -> list[tuple[str, dict]]:
                 plan.append(("text_search", {"phrase": v, "k": 4}))
     if "similarity_search" not in used:
         plan.append(("similarity_search", {"query": question, "k": 4}))
-    return plan[:5]
+    if "source_records" not in used:   # the dated source records (scoreboards, newsletters, decisions ...)
+        plan.append(("source_records", {}))
+    return plan[:6]
 
 
 def completeness_gap(h: Harness, ans: str, cites: list[str]) -> str:

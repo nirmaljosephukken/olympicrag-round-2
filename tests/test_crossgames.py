@@ -188,3 +188,11 @@ def test_text_search_is_deterministic_and_one_passage_per_document(tb):
     a, b = tb.text_search("Ben Ainslie"), tb.text_search("Ben Ainslie")
     assert [e.doc_id for e in a.evidence] == [e.doc_id for e in b.evidence]
     assert len({e.doc_id for e in a.evidence}) == len(a.evidence)
+
+
+@needs_build
+def test_linker_names_events_with_years(tb):
+    tb.catalog = lambda: {"sports": ["Athletics", "Sailing"], "venues": [], "events": {}}
+    o = tb.entity_linker("Who won the men's javelin throw at the 2008 Summer Olympics?")
+    assert o.data["events"] and all("2008" in e["title"] and "javelin" in e["title"].lower() for e in o.data["events"])
+    assert tb.entity_linker("Who won the women's race?").data["events"] == []
