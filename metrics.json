@@ -1,0 +1,30 @@
+{
+  "public": {
+    "questions": 50,
+    "accuracy_pct": 69.2,
+    "accuracy_method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
+    "not_in_corpus_answers": 8,
+    "input_tokens_total": 564212,
+    "output_tokens_total": 29351,
+    "tokens_per_question_avg": 11871,
+    "latency_ms_avg": 10206,
+    "latency_ms_p50": 6900,
+    "latency_ms_p95": 40167,
+    "llm_calls_per_question_avg": 4.04,
+    "tigergraph_queries_per_question_avg": 2.32,
+    "trace_steps_per_question_avg": 9.12,
+    "answers_with_tigergraph_step": 50,
+    "total_run_time_s": 510.3,
+    "cost_usd_total": 0.0
+  },
+  "settings": {
+    "llm_provider": "gemini",
+    "llm_model": "gemini-3.1-flash-lite",
+    "tg_graph": "OlympicRAG2",
+    "max_agent_steps": 8,
+    "price_usd_per_m_tokens": {
+      "input": 0.0,
+      "output": 0.0
+    }
+  }
+}

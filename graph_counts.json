@@ -1,0 +1,48 @@
+{
+  "graph": "OlympicRAG2",
+  "vertices": {
+    "Doc": 3530,
+    "Chunk": 25024,
+    "Event": 2743,
+    "Games": 23,
+    "Sport": 53,
+    "Venue": 397,
+    "Athlete": 7947,
+    "Nation": 140,
+    "Claim": 1430,
+    "SourceRecord": 39,
+    "Film": 546,
+    "Person": 4962,
+    "OfficeTerm": 240
+  },
+  "edges": {
+    "HAS_CHUNK": 25024,
+    "DESCRIBES": 2743,
+    "IN_GAMES": 2743,
+    "OF_SPORT": 2743,
+    "AT_VENUE": 2621,
+    "WON_MEDAL": 10871,
+    "MEDAL_FOR": 7461,
+    "NEXT_EDITION": 1682,
+    "NEXT_GAMES": 21,
+    "HAS_CLAIM": 1430,
+    "SUPERSEDES": 105,
+    "HAS_RECORD": 39,
+    "ABOUT_EVENT": 23,
+    "ABOUT_FILM": 546,
+    "ABOUT_PERSON": 138,
+    "FILM_CREDIT": 7052,
+    "HELD": 240,
+    "PRECEDED_BY": 228,
+    "SUCCEEDED_BY": 232,
+    "NEXT_TERM": 6
+  },
+  "edges_reverse": {
+    "PREV_EDITION": 1682,
+    "PREV_GAMES": 21,
+    "SUPERSEDED_BY": 105,
+    "PREV_TERM": 6
+  },
+  "vertices_total": 47074,
+  "edges_total": 65948
+}
