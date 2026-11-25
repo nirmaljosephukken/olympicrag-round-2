@@ -153,3 +153,12 @@ def test_uncited_answer_is_cited_from_gathered_evidence_and_citations_are_pruned
                           "citations": []}])
     r = pipelines.run_agentic(tb, "t8", "Sailing golds by nation at the 2008 Summer Olympics?")
     assert r.status == "answered" and r.citations and r.citations[0]["evidence"] == "E1"
+
+
+def test_uncited_supporting_evidence_is_added_before_rejecting():
+    from agr.tools import Evidence
+    h = pipelines.Harness("t9", "agentic", "q")
+    h.ledger = {"E1": Evidence("E1", "source", "S30", "final", "Women's omnium: Carson Velodrome."),
+                "E2": Evidence("E2", "source", "S37", "draft", "Women's omnium: Long Beach Arena (draft).")}
+    assert pipelines.complete_citations(h, "Planned at Long Beach Arena, held at Carson Velodrome.", ["E1"], "q") == ["E2"]
+    assert pipelines.complete_citations(h, "Held at Nowhere Hall.", ["E1"], "q") == []

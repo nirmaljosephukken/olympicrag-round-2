@@ -505,6 +505,12 @@ def run_agentic(tb: Toolbox, qid: str, question: str, max_steps: int | None = No
                 if found.ok:
                     cites = list(found.supporting)
             g = h.ground(ans, cites)
+            if not g.ok and g.problem == "unsupported":
+                # the missing names / numbers may be in evidence the agent gathered but did not cite: cite it
+                extra = complete_citations(h, ans, cites, question)
+                if extra:
+                    cites = cites + extra
+                    g = h.ground(ans, cites)
             if g.ok and g.supporting:      # cite selectively: keep the items that state part of the answer
                 cites = [c for c in cites if str(c).strip("[]") in set(g.supporting)] or cites
             h.res.steps.append(Step(len(h.res.steps) + 1, "evidence_evaluator", "check_grounding",
@@ -573,6 +579,19 @@ def write_answer(h: Harness, question: str, d: dict, draft: str, cites: list[str
     h.res.llm_calls += 1
     h.log_llm_step("answer_writer", "write_answer", r)
     return r.json()
+
+
+def complete_citations(h: Harness, ans: str, cites: list[str], question: str) -> list[str]:
+    """Evidence items already gathered (not cited) that state the names and numbers the cited ones lack. Only returns
+    items when, with them, every name and number of the answer is stated; otherwise []."""
+    cited = {str(c).strip("[]") for c in cites}
+    rest = [e for i, e in h.ledger.items() if i not in cited]
+    if not rest:
+        return []
+    full = grounding.check(ans, [h.ledger[c] for c in cited if c in h.ledger] + rest, question)
+    if not full.ok:
+        return []
+    return [i for i in full.supporting if i not in cited]
 
 
 def auto_search_plan(question: str, used: set[str]) -> list[tuple[str, dict]]:
