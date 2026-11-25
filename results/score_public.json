@@ -2,18 +2,18 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 85.7,
+  "accuracy_pct": 82.5,
   "full_credit": 35,
-  "status_matches": 46,
+  "status_matches": 45,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
-  "citation_precision_avg": 0.767,
-  "citation_recall_avg": 0.828,
+  "citation_precision_avg": 0.73,
+  "citation_recall_avg": 0.81,
   "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
   "grounding_report": {
-   "supported by cited evidence": 43,
-   "not_in_corpus": 7
+   "supported by cited evidence": 42,
+   "not_in_corpus": 8
   },
-  "tokens_per_correct_answer": 10778,
+  "tokens_per_correct_answer": 10687,
   "accuracy_by_style": {
    "count / comparison": {
     "questions": 10,
@@ -24,13 +24,13 @@
    },
    "explanation": {
     "questions": 12,
-    "accuracy_pct": 79.3,
+    "accuracy_pct": 63.9,
     "failing": [
      "r2-pub-022",
      "r2-pub-023",
+     "r2-pub-024",
      "r2-pub-039",
      "r2-pub-041",
-     "r2-pub-043",
      "r2-pub-044",
      "r2-pub-047",
      "r2-pub-050"
@@ -38,9 +38,8 @@
    },
    "list": {
     "questions": 13,
-    "accuracy_pct": 87.2,
+    "accuracy_pct": 94.9,
     "failing": [
-     "r2-pub-003",
      "r2-pub-014",
      "r2-pub-016"
     ]
@@ -52,24 +51,24 @@
    },
    "partial": {
     "questions": 2,
-    "accuracy_pct": 50.0,
+    "accuracy_pct": 30.0,
     "failing": [
+     "r2-pub-029",
      "r2-pub-048"
     ]
    },
    "short factual": {
     "questions": 5,
-    "accuracy_pct": 80.0,
+    "accuracy_pct": 60.0,
     "failing": [
-     "r2-pub-030"
+     "r2-pub-030",
+     "r2-pub-037"
     ]
    },
    "trend across editions": {
     "questions": 4,
-    "accuracy_pct": 83.3,
-    "failing": [
-     "r2-pub-010"
-    ]
+    "accuracy_pct": 100.0,
+    "failing": []
    }
   }
  },
@@ -111,7 +110,7 @@
    "citation_precision": 0.867,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4732
+   "tokens": 4844
   },
   {
    "qid": "r2-pub-002",
@@ -134,21 +133,54 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4508
+   "tokens": 4528
   },
   {
    "qid": "r2-pub-003",
    "style": "list",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
-   "grounding": "not_in_corpus",
-   "tokens": 10944
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "{\"event\": \"Men's Greco-Roman 60 kg\", \"gold\": \"Kenichiro Fumita\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's Greco-Roman 77 kg\", \"gold\": \"Nao Kusaka\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's freestyle 57 kg\", \"gold\": \"Rei Higuchi\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Men's freestyle 65 kg\", \"gold\": \"Kotaro Kiyooka\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 53 kg\", \"gold\": \"Akari Fujinami\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 57 kg\", \"gold\": \"Tsugumi Sakurai\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 62 kg\", \"gold\": \"Sakura Motoki\"}",
+     1.0
+    ],
+    [
+     "{\"event\": \"Women's freestyle 76 kg\", \"gold\": \"Yuka Kagami\"}",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.444,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4882
   },
   {
    "qid": "r2-pub-004",
@@ -176,10 +208,10 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 1.0,
+   "citation_precision": 0.4,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5458
+   "tokens": 10390
   },
   {
    "qid": "r2-pub-005",
@@ -210,7 +242,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4849
+   "tokens": 4885
   },
   {
    "qid": "r2-pub-006",
@@ -233,7 +265,7 @@
    "citation_precision": 0.444,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4792
+   "tokens": 4779
   },
   {
    "qid": "r2-pub-007",
@@ -256,7 +288,7 @@
    "citation_precision": 0.643,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4633
+   "tokens": 4755
   },
   {
    "qid": "r2-pub-008",
@@ -307,7 +339,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4745
+   "tokens": 4914
   },
   {
    "qid": "r2-pub-009",
@@ -362,14 +394,14 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4771
+   "tokens": 4834
   },
   {
    "qid": "r2-pub-010",
    "style": "trend across editions",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.333,
+   "score": 1.0,
    "facts": [
     [
      "{\"year\": 2000, \"nations\": 14}",
@@ -377,15 +409,15 @@
     ],
     [
      "{\"year\": 2004, \"nations\": 16}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2008, \"nations\": 16}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2012, \"nations\": 16}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2016, \"nations\": 16}",
@@ -393,15 +425,15 @@
     ],
     [
      "{\"year\": 2024, \"nations\": 17}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2028, \"nations\": 15}",
-     0.0
+     1.0
     ],
     [
      "max_year=2024",
-     0.0
+     1.0
     ],
     [
      "min_year=2000",
@@ -409,11 +441,11 @@
     ]
    ],
    "why": "",
-   "deterministic": 0.333,
-   "citation_precision": 1.0,
-   "citation_recall": 0.286,
+   "deterministic": 1.0,
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 9750
+   "tokens": 9351
   },
   {
    "qid": "r2-pub-011",
@@ -468,7 +500,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 13554
+   "tokens": 13986
   },
   {
    "qid": "r2-pub-012",
@@ -523,7 +555,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4570
+   "tokens": 4802
   },
   {
    "qid": "r2-pub-013",
@@ -566,7 +598,7 @@
    "citation_precision": 0.778,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5186
+   "tokens": 5275
   },
   {
    "qid": "r2-pub-014",
@@ -597,7 +629,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4760
+   "tokens": 4821
   },
   {
    "qid": "r2-pub-015",
@@ -624,7 +656,7 @@
    "citation_precision": 0.75,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4824
+   "tokens": 4902
   },
   {
    "qid": "r2-pub-016",
@@ -663,7 +695,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5064
+   "tokens": 4865
   },
   {
    "qid": "r2-pub-017",
@@ -682,7 +714,7 @@
    "citation_precision": 1.0,
    "citation_recall": 0.2,
    "grounding": "supported by cited evidence",
-   "tokens": 5204
+   "tokens": 5229
   },
   {
    "qid": "r2-pub-018",
@@ -705,7 +737,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 6787
+   "tokens": 6845
   },
   {
    "qid": "r2-pub-019",
@@ -728,7 +760,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4429
+   "tokens": 4482
   },
   {
    "qid": "r2-pub-020",
@@ -747,7 +779,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 15218
+   "tokens": 11639
   },
   {
    "qid": "r2-pub-021",
@@ -766,21 +798,26 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7230
+   "tokens": 7269
   },
   {
    "qid": "r2-pub-022",
    "style": "explanation",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
-   "grounding": "not_in_corpus",
-   "tokens": 14550
+   "status": "answered",
+   "score": 0.714,
+   "facts": [
+    [
+     "text",
+     0.71
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.714,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 15315
   },
   {
    "qid": "r2-pub-023",
@@ -799,26 +836,26 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7678
+   "tokens": 7806
   },
   {
    "qid": "r2-pub-024",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.714,
    "facts": [
     [
      "text",
-     1.0
+     0.71
     ]
    ],
    "why": "",
-   "deterministic": 1.0,
+   "deterministic": 0.714,
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7695
+   "tokens": 10274
   },
   {
    "qid": "r2-pub-025",
@@ -841,7 +878,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4919
+   "tokens": 5007
   },
   {
    "qid": "r2-pub-026",
@@ -864,7 +901,7 @@
    "citation_precision": 0.333,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4670
+   "tokens": 4796
   },
   {
    "qid": "r2-pub-027",
@@ -887,7 +924,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4623
+   "tokens": 4692
   },
   {
    "qid": "r2-pub-028",
@@ -901,14 +938,14 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 26341
+   "tokens": 17694
   },
   {
    "qid": "r2-pub-029",
    "style": "partial",
    "gold_status": "partial",
    "status": "partial",
-   "score": 1.0,
+   "score": 0.6,
    "facts": [
     [
      "{\"year\": 2004, \"gold\": \"Keiji Suzuki\"}",
@@ -916,11 +953,11 @@
     ],
     [
      "{\"year\": 2012, \"gold\": \"Teddy Riner\"}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2016, \"gold\": \"Teddy Riner\"}",
-     1.0
+     0.0
     ],
     [
      "missing:2008",
@@ -932,11 +969,11 @@
     ]
    ],
    "why": "",
-   "deterministic": 1.0,
-   "citation_precision": 0.188,
-   "citation_recall": 1.0,
+   "deterministic": 0.6,
+   "citation_precision": 1.0,
+   "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 22557
+   "tokens": 22394
   },
   {
    "qid": "r2-pub-030",
@@ -950,7 +987,7 @@
    "citation_precision": 0.0,
    "citation_recall": 0.0,
    "grounding": "not_in_corpus",
-   "tokens": 13874
+   "tokens": 25065
   },
   {
    "qid": "r2-pub-031",
@@ -964,7 +1001,7 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 19470
+   "tokens": 8412
   },
   {
    "qid": "r2-pub-032",
@@ -991,7 +1028,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4563
+   "tokens": 4518
   },
   {
    "qid": "r2-pub-033",
@@ -1014,7 +1051,7 @@
    "citation_precision": 0.286,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7496
+   "tokens": 4934
   },
   {
    "qid": "r2-pub-034",
@@ -1041,7 +1078,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4684
+   "tokens": 4653
   },
   {
    "qid": "r2-pub-035",
@@ -1064,7 +1101,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5036
+   "tokens": 4993
   },
   {
    "qid": "r2-pub-036",
@@ -1083,26 +1120,21 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4499
+   "tokens": 4498
   },
   {
    "qid": "r2-pub-037",
    "style": "short factual",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 1.0,
-   "facts": [
-    [
-     "Xinyi Gu",
-     1.0
-    ]
-   ],
-   "why": "",
-   "deterministic": 1.0,
-   "citation_precision": 1.0,
-   "citation_recall": 1.0,
-   "grounding": "supported by cited evidence",
-   "tokens": 10148
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 20114
   },
   {
    "qid": "r2-pub-038",
@@ -1121,7 +1153,7 @@
    "citation_precision": 0.111,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4427
+   "tokens": 9592
   },
   {
    "qid": "r2-pub-039",
@@ -1137,10 +1169,10 @@
    ],
    "why": "",
    "deterministic": 0.612,
-   "citation_precision": 1.0,
+   "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 19680
+   "tokens": 8088
   },
   {
    "qid": "r2-pub-040",
@@ -1156,29 +1188,29 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 1.0,
+   "citation_precision": 0.333,
    "citation_recall": 0.5,
    "grounding": "supported by cited evidence",
-   "tokens": 7861
+   "tokens": 8064
   },
   {
    "qid": "r2-pub-041",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.974,
+   "score": 0.26,
    "facts": [
     [
      "text",
-     0.97
+     0.26
     ]
    ],
    "why": "",
-   "deterministic": 0.974,
-   "citation_precision": 0.667,
-   "citation_recall": 0.667,
+   "deterministic": 0.26,
+   "citation_precision": 0.5,
+   "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 5845
+   "tokens": 5930
   },
   {
    "qid": "r2-pub-042",
@@ -1198,48 +1230,43 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 0.75,
-   "citation_recall": 1.0,
+   "citation_precision": 0.667,
+   "citation_recall": 0.667,
    "grounding": "supported by cited evidence",
-   "tokens": 8074
+   "tokens": 8166
   },
   {
    "qid": "r2-pub-043",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.989,
+   "score": 1.0,
    "facts": [
     [
      "text",
-     0.99
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.989,
+   "deterministic": 1.0,
    "citation_precision": 1.0,
-   "citation_recall": 0.75,
+   "citation_recall": 0.5,
    "grounding": "supported by cited evidence",
-   "tokens": 8327
+   "tokens": 8437
   },
   {
    "qid": "r2-pub-044",
    "style": "explanation",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 0.714,
-   "facts": [
-    [
-     "text",
-     0.71
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.714,
-   "citation_precision": 0.5,
-   "citation_recall": 1.0,
-   "grounding": "supported by cited evidence",
-   "tokens": 15503
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 15584
   },
   {
    "qid": "r2-pub-045",
@@ -1266,7 +1293,7 @@
    "citation_precision": 1.0,
    "citation_recall": 0.667,
    "grounding": "supported by cited evidence",
-   "tokens": 7659
+   "tokens": 7914
   },
   {
    "qid": "r2-pub-046",
@@ -1280,26 +1307,21 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "not_in_corpus",
-   "tokens": 21232
+   "tokens": 11357
   },
   {
    "qid": "r2-pub-047",
    "style": "explanation",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 0.982,
-   "facts": [
-    [
-     "text",
-     0.98
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.982,
-   "citation_precision": 1.0,
-   "citation_recall": 1.0,
-   "grounding": "supported by cited evidence",
-   "tokens": 19137
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0,
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 30201
   },
   {
    "qid": "r2-pub-048",
@@ -1324,9 +1346,9 @@
    "why": "",
    "deterministic": 0.0,
    "citation_precision": 1.0,
-   "citation_recall": 0.333,
+   "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 22496
+   "tokens": 11579
   },
   {
    "qid": "r2-pub-049",
@@ -1337,29 +1359,29 @@
    "facts": [],
    "why": "gold not_in_corpus, ours not_in_corpus",
    "deterministic": 1.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
+   "citation_precision": 1.0,
+   "citation_recall": 0.333,
    "grounding": "not_in_corpus",
-   "tokens": 18185
+   "tokens": 11641
   },
   {
    "qid": "r2-pub-050",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.357,
+   "score": 0.476,
    "facts": [
     [
      "text",
-     0.36
+     0.48
     ]
    ],
    "why": "",
-   "deterministic": 0.357,
+   "deterministic": 0.476,
    "citation_precision": 1.0,
    "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 4636
+   "tokens": 7069
   }
  ]
 }

@@ -1,31 +1,31 @@
 {
   "public": {
     "questions": 50,
-    "accuracy_pct": 85.7,
+    "accuracy_pct": 82.5,
     "accuracy_method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
-    "not_in_corpus_answers": 7,
-    "input_tokens_total": 422184,
-    "output_tokens_total": 39689,
-    "tokens_per_question_avg": 9237,
-    "latency_ms_avg": 45299,
-    "latency_ms_p50": 22339,
-    "latency_ms_p95": 167517,
-    "llm_calls_per_question_avg": 3.44,
-    "tigergraph_queries_per_question_avg": 2.36,
-    "trace_steps_per_question_avg": 8.12,
+    "not_in_corpus_answers": 8,
+    "input_tokens_total": 403818,
+    "output_tokens_total": 37246,
+    "tokens_per_question_avg": 8821,
+    "latency_ms_avg": 8500,
+    "latency_ms_p50": 6965,
+    "latency_ms_p95": 18727,
+    "llm_calls_per_question_avg": 3.26,
+    "tigergraph_queries_per_question_avg": 2.64,
+    "trace_steps_per_question_avg": 8.24,
     "answers_with_tigergraph_step": 50,
-    "total_run_time_s": 2264.9,
+    "total_run_time_s": 425.0,
     "cost_usd_total": 0.0
   },
   "public_checks": {
-    "citation_precision_avg": 0.767,
-    "citation_recall_avg": 0.828,
+    "citation_precision_avg": 0.73,
+    "citation_recall_avg": 0.81,
     "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
     "grounding_report": {
-      "supported by cited evidence": 43,
-      "not_in_corpus": 7
+      "supported by cited evidence": 42,
+      "not_in_corpus": 8
     },
-    "tokens_per_correct_answer": 10778
+    "tokens_per_correct_answer": 10687
   },
   "settings": {
     "llm_provider": "gemini",
