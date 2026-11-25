@@ -483,6 +483,18 @@ ANSWER_KEYS = ("answer", "asked_parts", "fact_stated", "status", "missing", "exp
 NOT_FOUND = {"", "unknown", "none", "n a", "not in corpus", "not in the corpus", "not_in_corpus", "null"}
 
 
+def strip_evidence_ids(ans: str) -> tuple[str, list[str]]:
+    """Evidence ids written inside the answer text ('... gold [E15, E16]') are a formatting slip: they are moved to the
+    citations and removed from the text, so the answer is checked on its content."""
+    ids = re.findall(r"\bE\d+\b", ans or "")
+    if not ids:
+        return ans, []
+    text = re.sub(r"\s*[\[(]\s*E\d+(?:\s*(?:,|;|and|&)\s*E\d+)*\s*[\])]", "", ans)
+    text = re.sub(r"\s*\bE\d+\b(?:\s*(?:,|;|and|&)\s*\bE\d+\b)*", "", text)
+    text = re.sub(r"\s+([.,;:])", r"\1", text).strip()
+    return text, list(dict.fromkeys(ids))
+
+
 def answer_fields(d: dict) -> tuple[str, list[str], str, list[str]]:
     """(answer text, citation ids, status, missing parts) from the agent's JSON, with the status decided in code:
     an empty / 'unknown' answer is not_in_corpus; otherwise the agent's asked_parts decide it: no part stated ->
@@ -491,6 +503,8 @@ def answer_fields(d: dict) -> tuple[str, list[str], str, list[str]]:
     ans = d.get("answer")
     ans = json.dumps(ans, ensure_ascii=False) if isinstance(ans, (list, dict)) else str(ans or "")
     cites = [str(c) for c in (d.get("citations") or [])] if isinstance(d.get("citations"), list) else []
+    ans, inline = strip_evidence_ids(ans)
+    cites += [c for c in inline if c not in cites]
     missing = [str(m) for m in (d.get("missing") or []) if str(m).strip()] if isinstance(d.get("missing"), list) else []
     status = str(d.get("status") or "").strip().lower()
     stated = str(d.get("fact_stated") or "").strip().lower()

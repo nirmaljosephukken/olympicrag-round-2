@@ -70,18 +70,12 @@ def test_not_in_corpus_needs_a_search_first_and_partial_needs_missing(tb, monkey
     assert pipelines.answer_fields({"answer": "A, B", "status": "answered", "fact_stated": "partly"})[2] == "partial"
 
 
-def test_rejected_answer_with_evidence_ids_gets_an_explicit_hint(tb, monkeypatch):
-    seen = []
-    replies = iter([{"action": "medal_table", "args": {"sport": "Sailing", "year": 2008, "season": "Summer"}},
-                    {"action": "final_answer", "answer": "E1 and E2", "status": "answered", "citations": ["E1"]},
-                    {"action": "final_answer", "answer": "GBR", "status": "answered", "citations": ["E1"]}])
-
-    def gen(prompt, **k):
-        seen.append(prompt)
-        return LLMResult(json.dumps(next(replies)), 100, 5, 1.0, "fake")
-    monkeypatch.setattr(pipelines, "generate", gen)
+def test_answer_with_inline_evidence_ids_is_accepted_with_them_as_citations(tb, monkeypatch):
+    script(monkeypatch, [{"action": "medal_table", "args": {"sport": "Sailing", "year": 2008, "season": "Summer"}},
+                         {"action": "final_answer", "answer": "GBR won 4 golds [E1].", "status": "answered",
+                          "citations": []}])
     r = pipelines.run_agentic(tb, "t4", "Sailing golds by nation at the 2008 Summer Olympics?")
-    assert r.status == "answered" and "Ids belong only" in seen[-1]
+    assert r.status == "answered" and r.answer == "GBR won 4 golds." and r.citations[0]["evidence"] == "E1"
 
 
 def test_history_keeps_recent_observations_in_full():
@@ -101,3 +95,11 @@ def test_status_from_asked_parts():
     assert f({"answer": "No, absence of a log entry proves nothing.",
               "asked_parts": parts(("does the absence prove it", "true"))})[2] == "answered"
     assert f({"answer": "X", "asked_parts": parts(("a", True)), "missing": ["stale"]})[2] == "answered"
+
+
+def test_evidence_ids_in_the_answer_text_move_to_citations():
+    text, ids = pipelines.strip_evidence_ids("Kim won gold [E15, E16]; Lee took silver (E3). See E7 and E8.")
+    assert text == "Kim won gold; Lee took silver. See." and ids == ["E15", "E16", "E3", "E7", "E8"]
+    ans, cites, _, _ = pipelines.answer_fields({"answer": "GBR won 4 [E1]", "citations": ["E2"]})
+    assert ans == "GBR won 4" and cites == ["E2", "E1"]
+    assert pipelines.strip_evidence_ids("Event 2028") == ("Event 2028", [])
