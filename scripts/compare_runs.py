@@ -1,14 +1,16 @@
 """
-Reproducibility check: compare two complete benchmark runs question by question.
+Repeatability: compare two independent runs of the same questions, question by question.
 
-    python scripts/compare_runs.py results results_confirm  ->  results_confirm/comparison.md
+    python scripts/compare_runs.py RUN_A.jsonl RUN_B.jsonl [--questions data/questions/questions_public.jsonl]
+                                   [--out results/compare_runs.json]
 
-For every split and pipeline it reports accuracy, tokens and grounding in each run, how many questions got the
-same verdict in both, and lists every question whose verdict changed, so a difference can be read in the traces.
-The hidden set has no gold answers, so it is compared on answers (normalised) and grounding.
+For each question: same status? same answer (normalised text)? same citations? and, when the questions file has
+published answers, the score of each run (scripts/score_public.py). Prints a table and a summary; writes JSON.
 """
 from __future__ import annotations
 
+import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -17,53 +19,66 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from agr.parse import norm  # noqa: E402
 
-A, B = (ROOT / a for a in (sys.argv[1:3] if len(sys.argv) > 2 else ("results", "results_confirm")))
-NAMES = {"rag": "RAG", "graphrag": "GraphRAG", "agentic": "Agentic GraphRAG"}
+
+def load(path: str) -> dict:
+    return {json.loads(l)["qid"]: json.loads(l) for l in open(path, encoding="utf-8") if l.strip()}
 
 
-def load(d: Path, split: str, p: str, judged: bool) -> dict:
-    f = d / f"{split}_{p}{'_judged' if judged else ''}.jsonl"
-    return {json.loads(l)["qid"]: json.loads(l) for l in open(f, encoding="utf-8")} if f.exists() else {}
+def scorer():
+    spec = importlib.util.spec_from_file_location("score_public", ROOT / "scripts" / "score_public.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
 
 
-out = [f"# Reproducibility: `{A.name}` vs `{B.name}`", "",
-       "Two complete, independent runs of all three pipelines on every question set, same code, same graph, same LLM.", ""]
-changed = []
-for split in ("public", "hard", "time", "open"):
-    out += [f"## {split}", "", "| Pipeline | Accuracy run 1 | Accuracy run 2 | Same verdict | Tokens/q run 1 | Tokens/q run 2 | "
-            "Grounded run 1 | Grounded run 2 |", "|---|---|---|---|---|---|---|---|"]
-    for p in NAMES:
-        a, b = load(A, split, p, True), load(B, split, p, True)
-        if not a or not b:
-            continue
-        common = sorted(set(a) & set(b))
-        acc = lambda d: sum(d[q]["verdict"] == "PASS" for q in common) / len(common)
-        tok = lambda d: sum(d[q]["total_tokens"] for q in common) / len(common)
-        grd = lambda d: sum(bool(d[q].get("grounded")) for q in common)
-        same = sum(a[q]["verdict"] == b[q]["verdict"] for q in common)
-        out.append(f"| {NAMES[p]} | {acc(a):.0%} | {acc(b):.0%} | {same}/{len(common)} | {tok(a):,.0f} | {tok(b):,.0f} | "
-                   f"{grd(a)}/{len(common)} | {grd(b)}/{len(common)} |")
-        changed += [(split, p, q, a[q]["answer"], a[q]["verdict"], b[q]["answer"], b[q]["verdict"])
-                    for q in common if a[q]["verdict"] != b[q]["verdict"]]
-    out.append("")
+def compare(a: dict, b: dict, qs: dict | None = None) -> dict:
+    s = scorer() if qs else None
+    rows = []
+    for qid in sorted(set(a) | set(b)):
+        x, y = a.get(qid), b.get(qid)
+        row = {"qid": qid, "in_both": bool(x and y)}
+        if x and y:
+            row.update({"same_status": x["status"] == y["status"],
+                        "same_answer": norm(str(x.get("answer") or "")) == norm(str(y.get("answer") or "")),
+                        "same_citations": set(x.get("citations") or []) == set(y.get("citations") or []),
+                        "status_a": x["status"], "status_b": y["status"]})
+            if s and qid in qs and "answer" in qs[qid]:
+                row["score_a"] = s.score_one(qs[qid], x)["score"]
+                row["score_b"] = s.score_one(qs[qid], y)["score"]
+        rows.append(row)
+    both = [r for r in rows if r["in_both"]]
+    summary = {"questions": len(rows), "in_both": len(both),
+               "same_status": sum(r["same_status"] for r in both),
+               "same_answer_text": sum(r["same_answer"] for r in both),
+               "same_citations": sum(r["same_citations"] for r in both)}
+    scored = [r for r in both if "score_a" in r]
+    if scored:
+        summary.update({"accuracy_a_pct": round(100 * sum(r["score_a"] for r in scored) / len(scored), 1),
+                        "accuracy_b_pct": round(100 * sum(r["score_b"] for r in scored) / len(scored), 1),
+                        "same_score": sum(abs(r["score_a"] - r["score_b"]) < 0.01 for r in scored),
+                        "changed_score": [r["qid"] for r in scored if abs(r["score_a"] - r["score_b"]) >= 0.01]})
+    return {"summary": summary, "questions": rows}
 
-out += ["## hidden (no gold answers: compared on the answer itself)", "",
-        "| Pipeline | Same answer | Unknown run 1 | Unknown run 2 | Grounded run 1 | Grounded run 2 |", "|---|---|---|---|---|---|"]
-for p in NAMES:
-    a, b = load(A, "hidden", p, False), load(B, "hidden", p, False)
-    if not a or not b:
-        continue
-    common = sorted(set(a) & set(b))
-    same = sum(norm(a[q]["answer"]) == norm(b[q]["answer"]) for q in common)
-    unk = lambda d: sum(norm(d[q]["answer"]) in ("", "unknown") for q in common)
-    grd = lambda d: sum(bool(d[q].get("grounded")) for q in common)
-    out.append(f"| {NAMES[p]} | {same}/{len(common)} | {unk(a)} | {unk(b)} | {grd(a)}/{len(common)} | {grd(b)}/{len(common)} |")
 
-out += ["", "## Questions whose verdict changed between the runs", ""]
-if changed:
-    out += ["| Set | Pipeline | Question | Run 1 | Run 2 |", "|---|---|---|---|---|"]
-    out += [f"| {s} | {NAMES[p]} | {q} | {ra[:60]} ({va}) | {rb[:60]} ({vb}) |" for s, p, q, ra, va, rb, vb in changed]
-else:
-    out.append("None.")
-(B / "comparison.md").write_text("\n".join(out) + "\n", encoding="utf-8")
-print("\n".join(out))
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("run_a")
+    ap.add_argument("run_b")
+    ap.add_argument("--questions", default=str(ROOT / "data/questions/questions_public.jsonl"))
+    ap.add_argument("--out", default=str(ROOT / "results/compare_runs.json"))
+    a = ap.parse_args()
+    qs = load(a.questions) if a.questions and Path(a.questions).exists() else None
+    res = compare(load(a.run_a), load(a.run_b), qs)
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(a.out).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    for r in res["questions"]:
+        if r["in_both"] and not (r["same_status"] and r["same_answer"]):
+            sc = f"  score {r['score_a']:.2f} -> {r['score_b']:.2f}" if "score_a" in r else ""
+            print(f"{r['qid']:<11} status {r['status_a']} / {r['status_b']}; answer "
+                  f"{'same' if r['same_answer'] else 'differs'}{sc}")
+    print(json.dumps(res["summary"], indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
