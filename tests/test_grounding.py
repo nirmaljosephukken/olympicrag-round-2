@@ -108,3 +108,12 @@ def test_list_markers_are_not_claimed_numbers():
     from agr.grounding import numbers_in
     assert numbers_in("Winners: (1) A - 9.79, (2) B; 3) C in 2016; 4. D") == ["9.79", "2016"]
     assert check("Michael Phelps (1) and Erik Vendt (2)", [PHELPS], Q_GOLD).ok
+
+
+def test_medal_role_keyed_on_cited_fields():
+    assert check("Erik Vendt (silver) and Michael Phelps (gold)", [PHELPS], Q_GOLD).ok
+    g = check("Erik Vendt (gold)", [PHELPS], Q_GOLD)
+    assert not g.ok and g.problem == "wrong_role" and "erik vendt" in g.reason
+    assert not check("gold: Erik Vendt", [PHELPS], Q_GOLD).ok
+    assert check("Michael Phelps won gold; Erik Vendt took silver.", [PHELPS], Q_GOLD).ok
+    assert check("Erik Vendt finished behind Phelps.", [PHELPS], Q_GOLD).ok   # no medal paired: nothing to check

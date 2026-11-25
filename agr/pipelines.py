@@ -381,6 +381,7 @@ FEEDBACK = {
                    "or gather it first. If no evidence states it, remove it from the answer and list that part "
                    "as not stated in asked_parts (the status becomes partial); never keep an unstated name.",
     "uncited": "Cite the evidence ids that state the answer.",
+    "wrong_role": "A medallist is paired with the wrong medal. Use the medal each name has in the cited evidence.",
     "unknown": "Keep investigating with a different tool or filter before giving up.",
     "ids": "You wrote evidence ids (like E7) inside the answer text. Ids belong only in \"citations\"; write the names, "
            "values and years themselves in the answer.",

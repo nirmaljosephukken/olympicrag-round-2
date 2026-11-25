@@ -9,7 +9,9 @@ several cited evidence items, but nothing in it may be invented:
      aggregation, never a number that only appears inside a date);
   2. every number in a longer answer must appear in some cited item;
   3. every name (a run of capitalised words, e.g. a person, nation, venue or event) must appear in some cited item, or in
-     the question itself (restating what was asked is not a new claim).
+     the question itself (restating what was asked is not a new claim);
+  4. a name the answer pairs with a medal ('A (silver)', 'gold: A', 'A won bronze') must hold that medal in the medal
+     fields of the cited structured facts (keyed on the tool output, not on the question wording).
 
 Words that open sentences or are generic ("The", "Gold", "Olympic", month names ...) are not names. Matching is
 accent-, case- and punctuation-insensitive, and team names stored run together ("Loredana DinuSimona Gherman") match.
@@ -92,6 +94,37 @@ def _has_number(text: str, n: str) -> bool:
     return re.search(r"(?<![\d.])" + re.escape(n) + r"(?![\d])(?!\.\d)", flat) is not None
 
 
+MEDAL_FIELD = re.compile(r"\b(gold|silver|bronze):\s*([^;\n|]+)", re.I)
+MEDAL_WORD = r"(gold|silver|bronze)"
+
+
+def medal_roles(cited_texts: list[str]) -> dict[str, str]:
+    """Name -> medal from the medal fields of cited structured facts ('gold: A; silver: B; bronze: C')."""
+    from agr.parse import split_names
+    roles: dict[str, str] = {}
+    for t in cited_texts:
+        for medal, names in MEDAL_FIELD.findall(t):
+            for n in split_names(names) or [names.strip()]:
+                if n and norm(n):
+                    roles.setdefault(norm(n), medal.lower())
+    return roles
+
+
+def role_conflicts(answer: str, roles: dict[str, str]) -> list[str]:
+    """Names the answer pairs with a different medal than the cited evidence gives them. Only tight pairings count:
+    'Name (silver)', 'Name - silver', 'Name won/took silver' right after the name, or 'silver: Name' right before."""
+    out = []
+    for n, medal in roles.items():
+        for m in re.finditer(r"(?<![a-z0-9])" + re.escape(n) + r"(?![a-z0-9])", norm(answer)):
+            after = norm(answer)[m.end(): m.end() + 25]
+            before = norm(answer)[max(0, m.start() - 12): m.start()]
+            said = re.match(r"\s*(?:[a-z]{3}\s+)?(?:won |took |claimed |the )?(?:the )?" + MEDAL_WORD + r"\b", after) \
+                or re.search(MEDAL_WORD + r"\s*$", before)
+            if said and said.group(1) != medal:
+                out.append(f"{n} ({said.group(1)} in the answer, {medal} in the evidence)")
+    return out
+
+
 def check(answer: str, cited: list, question: str = "") -> Grounding:
     """`cited` is a list of objects/dicts with id, doc_id, title, text, kind."""
     get = lambda e, k: (e.get(k) if isinstance(e, dict) else getattr(e, k, "")) or ""
@@ -134,6 +167,11 @@ def check(answer: str, cited: list, question: str = "") -> Grounding:
     if missing:
         return Grounding(False, f"not in the cited evidence: {', '.join(dict.fromkeys(missing))}"[:400],
                          problem="unsupported")
+    # 4. medal roles: a name the answer pairs with a medal must hold that medal in the cited evidence
+    wrong = role_conflicts(a, medal_roles([t for i, t in texts.items() if kinds[i] in ("graph", "aggregate")]))
+    if wrong:
+        return Grounding(False, f"medal role differs from the cited evidence: {'; '.join(wrong[:4])}",
+                         problem="wrong_role")
     if not used:  # nothing checkable in the answer (e.g. 'No'): it must at least rest on cited evidence
         used = set(texts)
     ids = [i for i in texts if i in used]
