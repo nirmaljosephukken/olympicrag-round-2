@@ -612,7 +612,8 @@ class Toolbox:
         """Exact phrase search (case-insensitive) over the text of every document, e.g. a film title or a person's
         name mentioned inside another article. Returns the matching passages, centred on the phrase: at most one per
         document, the documents that mention the phrase most often first (ties by document id), so the same search
-        always returns the same passages."""
+        always returns the same passages. When 10 or fewer documents mention the phrase, all of them are returned (a
+        rarely mentioned name may sit in the article that mentions it least)."""
         t0 = time.time()
         needle = str(phrase or "").strip()
         r = self.tg.query("text_search", {"needle": needle, "lim": 300})
@@ -627,7 +628,7 @@ class Toolbox:
         for h in allhits:
             doc_total[h["doc_id"]] = doc_total.get(h["doc_id"], 0) + h["text"].lower().count(needle.lower())
         hits = [h for _, h in sorted(per_doc.values(), key=lambda x: (-doc_total[x[1]["doc_id"]], x[1]["doc_id"]))]
-        hits = hits[:int(k)]
+        hits = hits if len(hits) <= 10 else hits[:int(k)]   # a rare phrase: every document that mentions it
         ev = []
         for h in hits:
             txt = h["text"]
