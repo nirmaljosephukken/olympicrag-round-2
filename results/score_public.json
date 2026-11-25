@@ -2,7 +2,7 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 84.3,
+  "accuracy_pct": 85.7,
   "full_credit": 35,
   "status_matches": 46,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)"
@@ -63,44 +63,11 @@
   {
    "qid": "r2-pub-003",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 1.0,
-   "facts": [
-    [
-     "{\"event\": \"Men's Greco-Roman 60 kg\", \"gold\": \"Kenichiro Fumita\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Men's Greco-Roman 77 kg\", \"gold\": \"Nao Kusaka\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Men's freestyle 57 kg\", \"gold\": \"Rei Higuchi\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Men's freestyle 65 kg\", \"gold\": \"Kotaro Kiyooka\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Women's freestyle 53 kg\", \"gold\": \"Akari Fujinami\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Women's freestyle 57 kg\", \"gold\": \"Tsugumi Sakurai\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Women's freestyle 62 kg\", \"gold\": \"Sakura Motoki\"}",
-     1.0
-    ],
-    [
-     "{\"event\": \"Women's freestyle 76 kg\", \"gold\": \"Yuka Kagami\"}",
-     1.0
-    ]
-   ],
-   "why": "",
-   "deterministic": 1.0
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-004",
@@ -290,7 +257,7 @@
    "qid": "r2-pub-010",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.333,
    "facts": [
     [
      "{\"year\": 2000, \"nations\": 14}",
@@ -298,15 +265,15 @@
     ],
     [
      "{\"year\": 2004, \"nations\": 16}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2008, \"nations\": 16}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2012, \"nations\": 16}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2016, \"nations\": 16}",
@@ -314,15 +281,15 @@
     ],
     [
      "{\"year\": 2024, \"nations\": 17}",
-     1.0
+     0.0
     ],
     [
      "{\"year\": 2028, \"nations\": 15}",
-     1.0
+     0.0
     ],
     [
      "max_year=2024",
-     1.0
+     0.0
     ],
     [
      "min_year=2000",
@@ -330,7 +297,7 @@
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.333
   },
   {
    "qid": "r2-pub-011",
@@ -606,15 +573,15 @@
    "qid": "r2-pub-020",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.794,
+   "score": 1.0,
    "facts": [
     [
      "text",
-     0.79
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.794
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-021",
@@ -657,15 +624,15 @@
    "qid": "r2-pub-024",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.714,
+   "score": 1.0,
    "facts": [
     [
      "text",
-     0.71
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.714
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-025",
@@ -763,16 +730,11 @@
   {
    "qid": "r2-pub-030",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 1.0,
-   "facts": [
-    [
-     "Ron Howard",
-     1.0
-    ]
-   ],
-   "why": "",
-   "deterministic": 1.0
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-031",
@@ -922,25 +884,30 @@
   {
    "qid": "r2-pub-040",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "text",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-041",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.195,
+   "score": 0.974,
    "facts": [
     [
      "text",
-     0.19
+     0.97
     ]
    ],
    "why": "",
-   "deterministic": 0.195
+   "deterministic": 0.974
   },
   {
    "qid": "r2-pub-042",
@@ -1022,19 +989,37 @@
   {
    "qid": "r2-pub-047",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 0.982,
+   "facts": [
+    [
+     "text",
+     0.98
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.982
   },
   {
    "qid": "r2-pub-048",
    "gold_status": "partial",
-   "status": "not_in_corpus",
+   "status": "answered",
    "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
+   "facts": [
+    [
+     "11-minute pause (unverified spectator)",
+     0.0
+    ],
+    [
+     "14-minute pause (unverified volunteer)",
+     0.0
+    ],
+    [
+     "status=partial",
+     0.0
+    ]
+   ],
+   "why": "",
    "deterministic": 0.0
   },
   {
@@ -1050,15 +1035,15 @@
    "qid": "r2-pub-050",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.238,
+   "score": 0.357,
    "facts": [
     [
      "text",
-     0.24
+     0.36
     ]
    ],
    "why": "",
-   "deterministic": 0.238
+   "deterministic": 0.357
   }
  ]
 }
