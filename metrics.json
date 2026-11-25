@@ -17,6 +17,16 @@
     "total_run_time_s": 2264.9,
     "cost_usd_total": 0.0
   },
+  "public_checks": {
+    "citation_precision_avg": 0.767,
+    "citation_recall_avg": 0.828,
+    "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
+    "grounding_report": {
+      "supported by cited evidence": 43,
+      "not_in_corpus": 7
+    },
+    "tokens_per_correct_answer": 10778
+  },
   "settings": {
     "llm_provider": "gemini",
     "llm_model": "gemini-3.1-flash-lite",

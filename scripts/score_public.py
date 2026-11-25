@@ -17,6 +17,9 @@ Method (deterministic, no LLM, the default):
   * question score = mean credit of its facts; accuracy_pct = mean question score x 100.
   Number words in the answer count as digits ('eight' = 8).
   Extra wrong list items are not penalised by this matcher (the official scorer does penalise them).
+Also reported: citation precision / recall of the cited doc_ids against gold_doc_ids, the grounding verdict of each
+answer (from its trace), accuracy per answer style (from the shape of the published answer, not the question
+wording) and tokens per correct answer.
 With --judge, an LLM judge (same provider as the system) re-scores questions whose deterministic score is below 1,
 and the higher of the two scores is kept.
 """
@@ -158,6 +161,54 @@ def judge_one(q: dict, a: dict) -> float | None:
         return None
 
 
+def answer_style(q: dict) -> str:
+    """A question's style, read from the SHAPE of its published answer (never from its wording): not_in_corpus,
+    partial, trend (rows per edition), list (several rows), count / comparison (a dict of values), explanation (a
+    sentence), short factual (a name or number)."""
+    a, st = q.get("answer"), q.get("status")
+    if st == "not_in_corpus":
+        return "not_in_corpus"
+    if st == "partial":
+        return "partial"
+    if isinstance(a, dict) and isinstance(a.get("rows"), list):
+        return "trend across editions"
+    if isinstance(a, list) and len(a) > 1:
+        return "list"
+    if isinstance(a, dict):
+        return "count / comparison"
+    if isinstance(a, str) and len(a.split()) > 6:
+        return "explanation"
+    return "short factual"
+
+
+def citation_scores(q: dict, a: dict | None) -> tuple[float | None, float | None]:
+    """Precision and recall of the cited doc_ids against the published gold_doc_ids (None when the question has no
+    gold documents, e.g. not_in_corpus)."""
+    gold = set(q.get("gold_doc_ids") or [])
+    if not gold or a is None:
+        return None, None
+    cited = set(a.get("citations") or [])
+    hit = len(cited & gold)
+    return (round(hit / len(cited), 3) if cited else 0.0), round(hit / len(gold), 3)
+
+
+def grounding_verdict(a: dict | None) -> str:
+    """From the trace: was the released answer checked as fully supported by cited evidence?"""
+    if a is None:
+        return "no answer"
+    if a.get("status") == "not_in_corpus":
+        return "not_in_corpus"
+    checks = [s for s in a.get("trace", []) if s.get("tool") == "evidence_evaluator"]
+    if checks and checks[-1].get("ok"):
+        return "supported by cited evidence"
+    return "not checked" if not checks else "failed check"
+
+
+def mean(xs):
+    xs = [x for x in xs if x is not None]
+    return round(sum(xs) / len(xs), 3) if xs else None
+
+
 def main() -> int:
     root = Path(__file__).resolve().parent.parent
     ap = argparse.ArgumentParser()
@@ -182,22 +233,43 @@ def main() -> int:
             r["judge"] = j
             if j is not None:
                 r["score"] = max(r["score"], round(j, 3))
-        rows.append({"qid": q["qid"], "gold_status": q.get("status"),
-                     "status": (ans.get(q["qid"]) or {}).get("status"), **r})
+        a_ = ans.get(q["qid"])
+        prec, rec = citation_scores(q, a_)
+        rows.append({"qid": q["qid"], "style": answer_style(q), "gold_status": q.get("status"),
+                     "status": (a_ or {}).get("status"), **r, "citation_precision": prec, "citation_recall": rec,
+                     "grounding": grounding_verdict(a_),
+                     "tokens": ((a_ or {}).get("input_tokens", 0) + (a_ or {}).get("output_tokens", 0))})
     acc = 100 * sum(r["score"] for r in rows) / len(rows)
     full = sum(1 for r in rows if r["score"] >= 0.999)
     status_ok = sum(1 for r in rows if r["status"] == r["gold_status"])
     method = ("deterministic fact-by-fact matching with partial credit (scripts/score_public.py)" +
               ("; LLM judge re-scores answers below full credit, higher score kept" if a.judge else ""))
+    styles = {}
+    for r in rows:
+        styles.setdefault(r["style"], []).append(r)
+    by_style = {s: {"questions": len(rs), "accuracy_pct": round(100 * sum(r["score"] for r in rs) / len(rs), 1),
+                    "failing": [r["qid"] for r in rs if r["score"] < 0.999]} for s, rs in sorted(styles.items())}
+    grounding = {}
+    for r in rows:
+        grounding[r["grounding"]] = grounding.get(r["grounding"], 0) + 1
+    total_tokens = sum(r["tokens"] for r in rows)
+    correct = sum(r["score"] for r in rows)
     summary = {"questions": len(rows), "answered_files": len(ans), "accuracy_pct": round(acc, 1),
-               "full_credit": full, "status_matches": status_ok, "method": method}
+               "full_credit": full, "status_matches": status_ok, "method": method,
+               "citation_precision_avg": mean(r["citation_precision"] for r in rows),
+               "citation_recall_avg": mean(r["citation_recall"] for r in rows),
+               "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
+               "grounding_report": grounding,
+               "tokens_per_correct_answer": round(total_tokens / correct) if correct else None,
+               "accuracy_by_style": by_style}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps({"summary": summary, "questions": rows}, ensure_ascii=False, indent=1),
                            encoding="utf-8")
-    print(f"{'qid':<11} {'gold':<13} {'ours':<13} score")
+    print(f"{'qid':<11} {'style':<22} {'gold':<13} {'ours':<13} score  cite P/R")
     for r in rows:
-        print(f"{r['qid']:<11} {r['gold_status'] or '':<13} {r['status'] or '-':<13} {r['score']:.2f}"
-              + (f"  ({r['why']})" if r["why"] else ""))
+        pr = "" if r["citation_precision"] is None else f"{r['citation_precision']:.2f}/{r['citation_recall']:.2f}"
+        print(f"{r['qid']:<11} {r['style']:<22} {r['gold_status'] or '':<13} {r['status'] or '-':<13} "
+              f"{r['score']:.2f}  {pr}" + (f"  ({r['why']})" if r["why"] else ""))
     print(json.dumps(summary, indent=1))
     return 0
 

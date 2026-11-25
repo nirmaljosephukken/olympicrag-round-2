@@ -128,3 +128,15 @@ def test_key_pool_prefers_fastest_and_skips_resting_or_spent_keys():
         assert False
     except RuntimeError as e:
         assert "exhausted" in str(e)
+
+
+def test_scorer_style_citations_and_grounding():
+    s = _load("score_public")
+    assert s.answer_style({"status": "answered", "answer": {"rows": [], "max_year": 1}}) == "trend across editions"
+    assert s.answer_style({"status": "answered", "answer": [{"a": 1}, {"a": 2}]}) == "list"
+    assert s.answer_style({"status": "answered", "answer": "A short name"}) == "short factual"
+    assert s.answer_style({"status": "not_in_corpus", "answer": None}) == "not_in_corpus"
+    assert s.citation_scores({"gold_doc_ids": ["A", "B"]}, {"citations": ["A", "C"]}) == (0.5, 0.5)
+    assert s.citation_scores({"gold_doc_ids": []}, {"citations": ["A"]}) == (None, None)
+    ok = {"status": "answered", "trace": [{"tool": "evidence_evaluator", "ok": True}]}
+    assert s.grounding_verdict(ok) == "supported by cited evidence"

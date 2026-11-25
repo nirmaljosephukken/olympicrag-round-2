@@ -71,13 +71,17 @@ def main() -> int:
     ap.add_argument("--score", default=str(ROOT / "results/score_public.json"))
     ap.add_argument("--out", default=str(ROOT / "metrics.json"))
     a = ap.parse_args()
-    acc, method = None, "not scored yet: run scripts/score_public.py"
+    acc, method, checks = None, "not scored yet: run scripts/score_public.py", None
     if Path(a.score).exists():
         s = json.loads(Path(a.score).read_text(encoding="utf-8"))["summary"]
         acc, method = s["accuracy_pct"], s["method"]
+        checks = {k: s.get(k) for k in ("citation_precision_avg", "citation_recall_avg", "citation_method",
+                                        "grounding_report", "tokens_per_correct_answer")}
     out = {}
     if Path(a.public).exists():
         out["public"] = split_metrics(Path(a.public), acc, method)
+        if checks:
+            out["public_checks"] = checks   # from scripts/score_public.py (needs the published answers)
     if Path(a.hidden).exists():
         out["hidden"] = split_metrics(Path(a.hidden), None, None)
     out["settings"] = {"llm_provider": SETTINGS.llm_provider, "llm_model": SETTINGS.model, "tg_graph": SETTINGS.tg_graph,
