@@ -2,9 +2,9 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 82.9,
+  "accuracy_pct": 84.3,
   "full_credit": 35,
-  "status_matches": 45,
+  "status_matches": 46,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)"
  },
  "questions": [
@@ -175,11 +175,20 @@
   {
    "qid": "r2-pub-007",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "noc=JPN",
+     1.0
+    ],
+    [
+     "golds=9",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-008",
@@ -597,15 +606,15 @@
    "qid": "r2-pub-020",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.794,
    "facts": [
     [
      "text",
-     1.0
+     0.79
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.794
   },
   {
    "qid": "r2-pub-021",
@@ -634,15 +643,15 @@
    "qid": "r2-pub-023",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.893,
    "facts": [
     [
      "text",
-     1.0
+     0.89
     ]
    ],
    "why": "",
-   "deterministic": 1.0
+   "deterministic": 0.893
   },
   {
    "qid": "r2-pub-024",
@@ -725,11 +734,11 @@
    "qid": "r2-pub-029",
    "gold_status": "partial",
    "status": "partial",
-   "score": 0.8,
+   "score": 1.0,
    "facts": [
     [
      "{\"year\": 2004, \"gold\": \"Keiji Suzuki\"}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2012, \"gold\": \"Teddy Riner\"}",
@@ -749,7 +758,7 @@
     ]
    ],
    "why": "",
-   "deterministic": 0.8
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-030",
@@ -900,43 +909,38 @@
    "qid": "r2-pub-039",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.816,
+   "score": 0.612,
    "facts": [
     [
      "text",
-     0.82
+     0.61
     ]
    ],
    "why": "",
-   "deterministic": 0.816
+   "deterministic": 0.612
   },
   {
    "qid": "r2-pub-040",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 1.0,
-   "facts": [
-    [
-     "text",
-     1.0
-    ]
-   ],
-   "why": "",
-   "deterministic": 1.0
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-041",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.26,
+   "score": 0.195,
    "facts": [
     [
      "text",
-     0.26
+     0.19
     ]
    ],
    "why": "",
-   "deterministic": 0.26
+   "deterministic": 0.195
   },
   {
    "qid": "r2-pub-042",
@@ -959,11 +963,16 @@
   {
    "qid": "r2-pub-043",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0
+   "status": "answered",
+   "score": 0.989,
+   "facts": [
+    [
+     "text",
+     0.99
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.989
   },
   {
    "qid": "r2-pub-044",
@@ -1013,47 +1022,29 @@
   {
    "qid": "r2-pub-047",
    "gold_status": "answered",
-   "status": "answered",
-   "score": 0.893,
-   "facts": [
-    [
-     "text",
-     0.89
-    ]
-   ],
-   "why": "",
-   "deterministic": 0.893
+   "status": "not_in_corpus",
+   "score": 0.0,
+   "facts": [],
+   "why": "answered not_in_corpus",
+   "deterministic": 0.0
   },
   {
    "qid": "r2-pub-048",
    "gold_status": "partial",
-   "status": "answered",
+   "status": "not_in_corpus",
    "score": 0.0,
-   "facts": [
-    [
-     "11-minute pause (unverified spectator)",
-     0.0
-    ],
-    [
-     "14-minute pause (unverified volunteer)",
-     0.0
-    ],
-    [
-     "status=partial",
-     0.0
-    ]
-   ],
-   "why": "",
+   "facts": [],
+   "why": "answered not_in_corpus",
    "deterministic": 0.0
   },
   {
    "qid": "r2-pub-049",
    "gold_status": "not_in_corpus",
-   "status": "answered",
-   "score": 0.0,
+   "status": "not_in_corpus",
+   "score": 1.0,
    "facts": [],
-   "why": "gold not_in_corpus, ours answered",
-   "deterministic": 0.0
+   "why": "gold not_in_corpus, ours not_in_corpus",
+   "deterministic": 1.0
   },
   {
    "qid": "r2-pub-050",
