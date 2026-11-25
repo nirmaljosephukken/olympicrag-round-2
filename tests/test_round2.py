@@ -107,3 +107,24 @@ def test_text_link_needs_sport_and_one_event_name():
             {"title": "Notebook", "body": "Women's individual: pause.", "published_utc": "2028-07-27T04:55:00Z"}]
     link_records(recs, events)
     assert [(r["event_id"], r["link_how"]) for r in recs] == [("AW", "text"), ("", ""), ("", "")]
+
+
+def test_key_pool_prefers_fastest_and_skips_resting_or_spent_keys():
+    from agr.llm import KeyPool
+    clock = [1000.0]
+    slept = []
+    pool = KeyPool(3, rpm=2, clock=lambda: clock[0], sleep=lambda s: (slept.append(s), clock.__setitem__(0, clock[0] + s)))
+    assert [pool.acquire() for _ in range(3)] == [0, 1, 2]     # untried keys first
+    pool.report(0, 6000); pool.report(1, 2000); pool.report(2, 4000)
+    assert pool.acquire() == 1                                 # fastest key
+    assert pool.acquire() == 2                                 # key 1 has used its 2 slots this minute
+    pool.rate_limited(0)
+    pool.spent(2)
+    k = pool.acquire()                                         # 0 resting, 1 full, 2 spent: wait, then a free key
+    assert slept and k in (0, 1)
+    pool.spent(0); pool.spent(1)
+    try:
+        pool.acquire()
+        assert False
+    except RuntimeError as e:
+        assert "exhausted" in str(e)

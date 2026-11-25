@@ -233,6 +233,12 @@ ANSWER_RULES = """Answer rules:
 - Answer what is asked, completely: a list holds every item the evidence supports and nothing else, each labelled
   (year, event, medal, winner); a count gives the number and what was counted; write numbers as digits (8, not eight);
   a "why" question gives the reason the evidence states.
+- When sources disagree, or the question asks whether one source supersedes or establishes something, name the
+  sources involved with their key facts (what each says, its source type, its date or effective time) and say which
+  one holds and why (e.g. a later post repeating an earlier provisional display does not override a signed decision).
+  If the fact you give comes from a provisional, draft or unverified source, say so in the answer itself. For a
+  question about what the absence of a record shows, say what it does and does not establish and the status of any
+  competing claims.
 - asked_parts: split the question into the facts it asks for and mark each one: "stated": true only if the
   evidence gives that fact itself (a name, number, time, place, reason, list). A fact the evidence only calls unknown,
   anonymous, unverified, unconfirmed, provisional or not recorded is NOT stated (false). When the question asks

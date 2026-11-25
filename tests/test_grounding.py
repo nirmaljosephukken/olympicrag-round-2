@@ -71,17 +71,11 @@ def test_quick_match_accepts_a_team_whatever_the_separators():
     assert not quick_match("Dani King, Laura Trott, Joanna Rowsell, Ed Clancy", ["Dani KingLaura TrottJoanna Rowsell"])  # one extra
 
 
-def test_parallel_quota_errors_skip_a_spent_key_only_once():
-    from agr import llm
-    keys, idx = llm._KEYS[:], llm._key_idx[0]
-    try:
-        llm._KEYS[:] = ["a", "b", "c"]; llm._key_idx[0] = 0
-        assert llm._rotate_key(0) and llm._key_idx[0] == 1   # first worker moves past key a
-        assert llm._rotate_key(0) and llm._key_idx[0] == 1   # second worker saw key a fail too: no further skip
-        assert llm._rotate_key(1) and llm._key_idx[0] == 2
-        assert not llm._rotate_key(2)                        # last key spent
-    finally:
-        llm._KEYS[:] = keys; llm._key_idx[0] = idx
+def test_parallel_quota_errors_spend_a_key_only_once():
+    from agr.llm import KeyPool
+    pool = KeyPool(3, rpm=0)
+    pool.spent(0); pool.spent(0)            # two workers saw the same key fail: it is dropped once
+    assert pool.usable() == [1, 2]
 
 
 def test_round2_answer_may_combine_cited_items():

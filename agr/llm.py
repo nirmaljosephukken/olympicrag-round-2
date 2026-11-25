@@ -2,10 +2,15 @@
 
 LLM_PROVIDER=gemini|anthropic|openai selects the provider; LLM_MODEL overrides its default model.
 
+Several Gemini keys form a pool (`KeyPool`). Every call goes to the fastest key that has a free request slot:
+each key's response time is tracked (moving average; untried keys are tried first), each key has its own per-minute
+limit (LLM_RPM, default 15), a key that answers "rate limited" rests for 60 s while the call moves to the next key at
+once (no back-off), and a key whose daily quota is spent is dropped for the run.
+
 Rate limiting is done BEFORE a question starts (`wait_for_budget`), so a free-tier wait never lands inside a
-question's latency: with LLM_RPM=15 the runner waits until enough request slots are free in the last 60 s for a whole
-question (LLM_CALLS_RESERVED, default 6) before starting the clock. A guard inside `generate` still prevents a 429 if a
-question uses more calls than reserved; such waits are counted in `WAITS` so they can be reported.
+question's latency: the runner waits until enough request slots are free across the keys for a whole question
+(LLM_CALLS_RESERVED, default 6) before starting the clock. If a question still needs more, the wait inside it is
+counted in `WAITS` so it can be reported.
 """
 from __future__ import annotations
 
@@ -27,12 +32,12 @@ ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/") + "/chat/completions"
 
 _lock = threading.Lock()
-RPM = int(os.getenv("LLM_RPM", "15" if SETTINGS.llm_provider == "gemini" else "0"))  # 0 = no limit
-_calls: collections.deque = collections.deque()   # start times of the calls in the last 60 s
+RPM = int(os.getenv("LLM_RPM", "15" if SETTINGS.llm_provider == "gemini" else "0"))  # per key; 0 = no limit
 WAITS = {"in_question_s": 0.0}
 
-# One or more Gemini keys, rotated when a key's daily quota is spent: GEMINI_API_KEYS=key1,key2 and/or
-# GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3 ... (duplicates removed, order kept).
+
+# One or more Gemini keys: GEMINI_API_KEYS=key1,key2 and/or GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3 ...
+# (duplicates removed, order kept).
 def _gemini_keys() -> list[str]:
     found = [k for k in (os.getenv("GEMINI_API_KEYS") or "").split(",")] + [SETTINGS.gemini_key]
     found += [os.environ[n] for n in sorted((n for n in os.environ if re.fullmatch(r"GEMINI_API_KEY\d+", n)),
@@ -41,44 +46,89 @@ def _gemini_keys() -> list[str]:
 
 
 _KEYS = _gemini_keys()
-_key_idx = [0]
 
 
-def _slots_free(now: float) -> int:
-    while _calls and now - _calls[0] > 60:
-        _calls.popleft()
-    return RPM - len(_calls)
+class KeyPool:
+    """Chooses the key for each call: the fastest usable key with a free per-minute slot."""
+
+    def __init__(self, n: int, rpm: int, clock=time.time, sleep=time.sleep):
+        self.n, self.rpm, self.clock, self.sleep = max(1, n), rpm, clock, sleep
+        self.calls = [collections.deque() for _ in range(self.n)]
+        self.cool_until = [0.0] * self.n
+        self.ewma: list[float | None] = [None] * self.n
+        self.exhausted: set[int] = set()
+        self.tried: set[int] = set()
+
+    def _free(self, i: int, now: float) -> int:
+        if not self.rpm:
+            return 1 << 30
+        q = self.calls[i]
+        while q and now - q[0] > 60:
+            q.popleft()
+        return self.rpm - len(q)
+
+    def usable(self) -> list[int]:
+        return [i for i in range(self.n) if i not in self.exhausted]
+
+    def free_total(self) -> int:
+        now = self.clock()
+        return sum(max(0, self._free(i, now)) for i in self.usable() if self.cool_until[i] <= now)
+
+    def _next_free_in(self, now: float) -> float:
+        waits = []
+        for i in self.usable():
+            w = max(0.0, self.cool_until[i] - now)
+            if self.rpm and self._free(i, now) <= 0:
+                w = max(w, 60 - (now - self.calls[i][0]))
+            waits.append(w)
+        return max(0.05, min(waits) + 0.05)
+
+    def acquire(self, count_wait: bool = True) -> int:
+        while True:
+            with _lock:
+                if not self.usable():
+                    raise RuntimeError("Gemini daily quota exhausted on every configured key")
+                now = self.clock()
+                ready = [i for i in self.usable() if self.cool_until[i] <= now and self._free(i, now) > 0]
+                if ready:   # untried keys first, then the fastest so far
+                    i = min(ready, key=lambda k: (k in self.tried, self.ewma[k] or 0.0, k))
+                    self.tried.add(i)
+                    self.calls[i].append(now)
+                    return i
+                wait = self._next_free_in(now)
+            if count_wait:
+                WAITS["in_question_s"] += wait
+            self.sleep(wait)
+
+    def report(self, i: int, ms: float) -> None:
+        with _lock:
+            self.ewma[i] = ms if self.ewma[i] is None else 0.7 * self.ewma[i] + 0.3 * ms
+
+    def rate_limited(self, i: int) -> None:
+        with _lock:
+            self.cool_until[i] = self.clock() + 60
+
+    def spent(self, i: int) -> None:
+        with _lock:
+            if i not in self.exhausted:
+                self.exhausted.add(i)
+                print(f"[llm] daily quota reached on key #{i + 1}; {len(self.usable())} key(s) left", flush=True)
+
+
+POOL = KeyPool(len(_KEYS) if SETTINGS.llm_provider == "gemini" else 1, RPM)
 
 
 def wait_for_budget(calls: int | None = None) -> float:
-    """Block until `calls` requests can be made within the provider's per-minute limit. Called by the runner
-    BEFORE a question's clock starts. Returns the seconds waited."""
+    """Block until `calls` requests can be made within the per-minute limits of the usable keys. Called by the
+    runner BEFORE a question's clock starts. Returns the seconds waited."""
     if not RPM:
         return 0.0
-    calls = min(RPM, calls or int(os.getenv("LLM_CALLS_RESERVED", "6")))
     t0 = time.time()
     while True:
-        with _lock:
-            now = time.time()
-            if _slots_free(now) >= calls:
-                return time.time() - t0
-            wait = 60 - (now - _calls[0]) + 0.05
-        time.sleep(max(0.05, wait))
-
-
-def _take_slot() -> None:
-    """Guard inside a question: only waits if the question used more calls than were reserved for it."""
-    if not RPM:
-        return
-    while True:
-        with _lock:
-            now = time.time()
-            if _slots_free(now) > 0:
-                _calls.append(now)
-                return
-            wait = 60 - (now - _calls[0]) + 0.05
-        WAITS["in_question_s"] += wait
-        time.sleep(max(0.05, wait))
+        need = min(RPM * max(1, len(POOL.usable())), calls or int(os.getenv("LLM_CALLS_RESERVED", "6")))
+        if POOL.free_total() >= need:
+            return time.time() - t0
+        time.sleep(1.0)
 
 
 def _is_daily_limit(body: str) -> bool:
@@ -87,17 +137,6 @@ def _is_daily_limit(body: str) -> bool:
     if m:
         return int(m.group(1)) > 3600
     return bool(re.search(r"retry in \d+h", body))
-
-
-def _rotate_key(failed: int | None = None) -> bool:
-    with _lock:
-        if failed is not None and _key_idx[0] != failed:
-            return True
-        if _key_idx[0] + 1 < len(_KEYS):
-            _key_idx[0] += 1
-            print(f"[llm] daily quota reached, switching to key #{_key_idx[0] + 1}", flush=True)
-            return True
-    return False
 
 
 @dataclass
@@ -133,19 +172,16 @@ class LLMResult:
 
 
 # ----------------------------------------------------------------------------- providers
-def _gemini(prompt, system, model, json_mode, temperature, max_out):
+def _gemini(prompt, system, model, json_mode, temperature, max_out, key=0):
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": temperature, "maxOutputTokens": max_out}}
     if system:
         body["systemInstruction"] = {"parts": [{"text": system}]}
     if json_mode:
         body["generationConfig"]["responseMimeType"] = "application/json"
-    used = _key_idx[0]
-    r = requests.post(GEMINI_URL.format(model=model), params={"key": _KEYS[used]}, json=body, timeout=120)
-    if r.status_code == 429 and _is_daily_limit(r.text):
-        if _rotate_key(used):
-            return "retry_now", r
-        raise RuntimeError("Gemini daily quota exhausted on every configured key")
+    r = requests.post(GEMINI_URL.format(model=model), params={"key": _KEYS[key]}, json=body, timeout=int(os.getenv("LLM_TIMEOUT_S", "45")))
+    if r.status_code == 429:
+        return ("daily" if _is_daily_limit(r.text) else "rate_limited"), r
     if r.status_code != 200:
         return "retry", r
     data = r.json()
@@ -156,7 +192,7 @@ def _gemini(prompt, system, model, json_mode, temperature, max_out):
                   um.get("candidatesTokenCount", 0) + um.get("thoughtsTokenCount", 0))
 
 
-def _anthropic(prompt, system, model, json_mode, temperature, max_out):
+def _anthropic(prompt, system, model, json_mode, temperature, max_out, key=0):
     if json_mode:
         prompt += "\n\nReply with a single JSON object only."
     body = {"model": model, "max_tokens": max_out, "temperature": temperature,
@@ -174,7 +210,7 @@ def _anthropic(prompt, system, model, json_mode, temperature, max_out):
                   + u.get("cache_creation_input_tokens", 0), u.get("output_tokens", 0))
 
 
-def _openai(prompt, system, model, json_mode, temperature, max_out):
+def _openai(prompt, system, model, json_mode, temperature, max_out, key=0):
     msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
     body = {"model": model, "messages": msgs, "max_completion_tokens": max_out}
     if json_mode:
@@ -196,21 +232,26 @@ def generate(prompt: str, system: str | None = None, model: str | None = None, j
     model = model or SETTINGS.model
     call = PROVIDERS[SETTINGS.llm_provider]
     delay, last, t_start = 2.0, None, time.time()
-    for attempt in range(8):
-        _take_slot()
+    for attempt in range(10):
+        key = POOL.acquire()
         t0 = time.time()
         try:
-            status, out = call(prompt, system, model, json_mode, temperature, max_output_tokens)
+            status, out = call(prompt, system, model, json_mode, temperature, max_output_tokens, key)
         except requests.RequestException as e:
             last = e
             time.sleep(delay); delay *= 2; continue
         if status == "ok":
+            ms = (time.time() - t0) * 1000
+            POOL.report(key, ms)
             text, tin, tout = out
-            return LLMResult(text=text, input_tokens=tin, output_tokens=tout, ms=(time.time() - t0) * 1000,
-                             model=model, key=_key_idx[0] + 1, attempts=attempt + 1,
-                             total_ms=(time.time() - t_start) * 1000)
+            return LLMResult(text=text, input_tokens=tin, output_tokens=tout, ms=ms, model=model, key=key + 1,
+                             attempts=attempt + 1, total_ms=(time.time() - t_start) * 1000)
         last = out
-        if status == "retry_now":
+        if status == "daily":          # this key is spent for the day: the next call goes to another key
+            POOL.spent(key)
+            continue
+        if status == "rate_limited":   # this key rests for a minute; retry at once on another key
+            POOL.rate_limited(key)
             continue
         if out.status_code in (408, 429, 500, 502, 503, 504, 529):
             time.sleep(delay + random.random()); delay = min(delay * 2, 60); continue
