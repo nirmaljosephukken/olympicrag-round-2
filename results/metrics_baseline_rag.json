@@ -1,0 +1,40 @@
+{
+  "public": {
+    "questions": 50,
+    "accuracy_pct": 35.4,
+    "accuracy_method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
+    "not_in_corpus_answers": 21,
+    "input_tokens_total": 152052,
+    "output_tokens_total": 11833,
+    "tokens_per_question_avg": 3278,
+    "latency_ms_avg": 7366,
+    "latency_ms_p50": 2746,
+    "latency_ms_p95": 49970,
+    "llm_calls_per_question_avg": 1.0,
+    "tigergraph_queries_per_question_avg": 1.0,
+    "trace_steps_per_question_avg": 2.02,
+    "answers_with_tigergraph_step": 50,
+    "total_run_time_s": 368.3,
+    "cost_usd_total": 0.0
+  },
+  "public_checks": {
+    "citation_precision_avg": 0.533,
+    "citation_recall_avg": 0.326,
+    "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
+    "grounding_report": {
+      "not_in_corpus": 21,
+      "not checked": 29
+    },
+    "tokens_per_correct_answer": 9256
+  },
+  "settings": {
+    "llm_provider": "gemini",
+    "llm_model": "gemini-3.1-flash-lite",
+    "tg_graph": "OlympicRAG2",
+    "max_agent_steps": 8,
+    "price_usd_per_m_tokens": {
+      "input": 0.0,
+      "output": 0.0
+    }
+  }
+}
