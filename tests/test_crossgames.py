@@ -196,3 +196,16 @@ def test_linker_names_events_with_years(tb):
     o = tb.entity_linker("Who won the men's javelin throw at the 2008 Summer Olympics?")
     assert o.data["events"] and all("2008" in e["title"] and "javelin" in e["title"].lower() for e in o.data["events"])
     assert tb.entity_linker("Who won the women's race?").data["events"] == []
+
+
+@needs_build
+def test_event_id_passed_as_event_name_is_resolved(tb):
+    import json
+    from tests.fake_tg import BUILD
+    events = json.loads((BUILD / "events.json").read_text(encoding="utf-8"))
+    tb.catalog = lambda: {"sports": sorted({e["sport"] for e in events}), "venues": [], "events": {}}
+    jav = next(e for e in events if e["event"] == "Men's javelin throw" and e["year"] == 2008)
+    p = tb.participation_by_edition(jav["id"])
+    assert p.found and len(p.data["rows"]) >= 5
+    g = tb.graph_search(event=jav["id"], year=2008)
+    assert g.found and g.data[0]["id"] == jav["id"]

@@ -195,6 +195,16 @@ class Toolbox:
         return out[:limit]
 
     # ------------------------------------------------------------ graph agents
+    def _event_from_id(self, event: str, sport: str = "", season: str = "") -> tuple[str, str, str]:
+        """(event name, sport, season): an event id (a doc_id such as 'Q15052026' or 'SYN-LA28-020') passed where an
+        event NAME is expected is replaced by that event's name, sport and season, so the call still finds it."""
+        e = self.event_index().get(str(event or "").strip())
+        if not e:
+            return event, sport, season
+        title = self.docs.get(str(event).strip(), {}).get("title", "")
+        m = TITLE_RE.match(title)
+        return e["event"], sport or e["sport"], season or (m.group("season") if m else "")
+
     def _split_sport(self, sport: str, event: str = "") -> tuple[str, str]:
         """(sport, event): a value passed as `sport` that is not a sport in the catalogue (e.g. "10 metre air rifle")
         is used as the event name instead, so the call still finds the events."""
@@ -210,6 +220,7 @@ class Toolbox:
                      event: str = "", limit: int = 40) -> Observation:
         t0 = time.time()
         sport, event = self._split_sport(sport, event)
+        event, sport, season = self._event_from_id(event, sport, season)
         m = TITLE_RE.match(event or "")
         if m:  # a full article title was passed as the event name: use its parts
             sport, year, season, event = sport or m.group("sport"), int(year or -1) if year not in (None, "", -1) \
@@ -568,6 +579,7 @@ class Toolbox:
         """Nations (or competitors) at every edition of one event in the corpus, with the max and min editions.
         `event` is the event name, e.g. "Women's javelin throw" (a full article title also works)."""
         t0 = time.time()
+        event, sport, season = self._event_from_id(event, sport, season)
         m = TITLE_RE.match(event or "")
         if m:
             sport, season, event = sport or m.group("sport"), season or m.group("season"), m.group("event")
