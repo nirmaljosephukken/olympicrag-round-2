@@ -72,20 +72,23 @@ def main() -> int:
              **summary(r / "score_public.json", ROOT / "metrics.json")},
             {"name": "Public, repeatability run A", "code": "c0c43ec", **summary(r / "score_run_A.json", answers=r / "run_A_public.jsonl")},
             {"name": "Public, repeatability run B", "code": "c0c43ec", **summary(r / "score_run_B.json", answers=r / "run_B_public.jsonl")},
-            {"name": "Held-out (39 questions, answers computed by code)", "code": "c0c43ec",
+            {"name": "Held-out, frozen code (39 questions, answers computed by code)", "code": "e890a5f",
+             **summary(r / "score_heldout_e890a5f.json", answers=r / "heldout_e890a5f.jsonl")},
+            {"name": "Held-out, earlier code (39 questions, answers computed by code)", "code": "c0c43ec",
              **summary(r / "score_heldout.json", answers=r / "answers_heldout.jsonl")},
             {"name": "Baseline: RAG (1 LLM call)", "code": "fca70f6",
              **summary(r / "score_baseline_rag.json", r / "metrics_baseline_rag.json")},
             {"name": "Baseline: GraphRAG (1 LLM call)", "code": "fca70f6",
              **summary(r / "score_baseline_graphrag.json", r / "metrics_baseline_graphrag.json")},
         ],
+        "heldout_note": "The held-out set is no longer fully untouched: some fixes made after the c0c43ec run (for example citing supporting evidence the answer left uncited) were prompted by held-out misses. The hidden set remains the real test.",
         "repeatability": (load_json(r / "compare_A_B.json") or {}).get("summary"),
         "repeatability_rows": [{k: q.get(k) for k in ("qid", "score_a", "score_b", "status_a", "status_b")}
                                for q in (load_json(r / "compare_A_B.json") or {}).get("questions", [])],
         "answers": answers_with_gold(ROOT / "answers_public.jsonl", ROOT / "data/questions/questions_public.jsonl",
                                      r / "score_public.json", "public")
-        + answers_with_gold(r / "answers_heldout.jsonl", ROOT / "data/questions/questions_heldout.jsonl",
-                            r / "score_heldout.json", "held-out"),
+        + answers_with_gold(r / "heldout_e890a5f.jsonl", ROOT / "data/questions/questions_heldout.jsonl",
+                            r / "score_heldout_e890a5f.json", "held-out"),
     }
     out = ROOT / "docs" / "data.json"
     out.parent.mkdir(parents=True, exist_ok=True)

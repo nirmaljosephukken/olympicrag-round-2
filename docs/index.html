@@ -192,6 +192,7 @@
 <section id="results" class="hidden">
   <h2>Accuracy across runs</h2>
   <p class="sec-sub">Strict fact-by-fact scoring against the published answers (partial credit per fact). An LLM judge re-scores the latest public run at 90.3%; the official score uses the organisers' key.</p>
+  <p class="sec-sub" id="hoNote"></p>
   <div class="card chart"><svg id="runsChart" width="100%" role="img" aria-label="Accuracy by run"></svg></div>
 
   <h2>When does a question need an agent?</h2>
@@ -216,7 +217,7 @@
   <h2>Every recorded answer, with its reasoning</h2>
   <p class="sec-sub">Pick a question. The timeline shows each step in order, sized by its time: <span style="color:var(--series-1)">■</span> LLM decisions, <span style="color:var(--tg)">■</span> TigerGraph queries, <span style="color:var(--code)">■</span> code steps.</p>
   <div class="two">
-    <div class="card"><div style="display:flex;gap:8px"><select id="set" style="flex:0 0 150px"><option value="public">Public (50)</option><option value="held-out">Held-out (38)</option></select><input type="search" id="filter" placeholder="Filter ..."></div>
+    <div class="card"><div style="display:flex;gap:8px"><select id="set" style="flex:0 0 150px"><option value="public">Public (50)</option><option value="held-out">Held-out</option></select><input type="search" id="filter" placeholder="Filter ..."></div>
       <div class="list" id="qlist"></div></div>
     <div id="qview" class="card"><p class="muted">Pick a question on the left.</p></div>
   </div>
@@ -379,10 +380,13 @@ function kpis() {
   const pubRuns = r.filter(x => x.name.startsWith("Public")).map(x => x.accuracy_pct);
   const avg = pubRuns.reduce((a, b) => a + b, 0) / (pubRuns.length || 1);
   const gr = r.find(x => x.name.includes("GraphRAG")) || {};
-  const items = [[pct(ho.accuracy_pct), "held-out questions the system never saw (answers computed by code)"],
+  const items = [[pct(ho.accuracy_pct), `held-out questions, frozen code ${ho.code || ""} (answers computed by code; ${pct(r.find(x => x.name.startsWith("Held-out, earlier"))?.accuracy_pct)} on earlier code)`],
     ["~" + avg.toFixed(0) + "%", `public questions, mean of ${pubRuns.length} full runs (${Math.min(...pubRuns).toFixed(1)}–${Math.max(...pubRuns).toFixed(1)}%)`],
     [pub.latency_ms_p50 ? (pub.latency_ms_p50 / 1000).toFixed(0) + " s" : "–", "median time per question, with every step traced"],
     [(avg / Math.max(gr.accuracy_pct || 1, rag.accuracy_pct || 1)).toFixed(1) + "×", `the accuracy of one-call baselines (GraphRAG ${pct(gr.accuracy_pct)}, RAG ${pct(rag.accuracy_pct)})`]];
+  $("#hoNote").textContent = DATA.heldout_note || "";
+  const cnt = s => DATA.answers.filter(a => a.set === s).length;
+  $("#set").options[0].text = `Public (${cnt("public")})`; $("#set").options[1].text = `Held-out (${cnt("held-out")})`;
   $("#kpis").innerHTML = items.map(([b, s]) => `<div class="kpi"><b>${b}</b><span>${esc(s)}</span></div>`).join("");
 }
 
@@ -400,7 +404,7 @@ function hbar(svg, rows, opts) {   // rows: [{label, value, color, tip}]
 }
 function drawResults() {
   if (!DATA) return;
-  const R = DATA.runs, short = n => n.replace("Public, ", "").replace(" (39 questions, answers computed by code)", "").replace(" (1 LLM call)", "");
+  const R = DATA.runs, short = n => n.replace("Public, ", "").replace(" (39 questions, answers computed by code)", "").replace("frozen code", "frozen code e890a5f").replace("earlier code", "earlier code c0c43ec").replace(" (1 LLM call)", "");
   const color = n => n.startsWith("Baseline") ? css("--code") : css("--series-1");
   hbar($("#runsChart"), R.map(r => ({label: short(r.name), value: r.accuracy_pct, color: color(r.name),
     tip: `<b>${esc(short(r.name))}</b><br>accuracy ${pct(r.accuracy_pct)} · full credit ${fmt(r.full_credit)}<br>status right ${fmt(r.status_matches)} · code ${esc(r.code)}`})),

@@ -156,10 +156,21 @@ lists 94.9%, trends across editions 100%, `not_in_corpus` 100%, explanations 63.
 ### Held-out questions (39, answers computed by code)
 
 `scripts/make_heldout_questions.py` builds questions from the parsed corpus with our own templates, avoiding every
-document the public questions are about; no LLM writes a question or an answer. On code `c0c43ec`: **85.9%** (33 of 39
-full credit, 35 statuses right; citation P / R 0.60 / 0.91). By kind: trends, repeat winners, gold leader per sport,
-2028 events with no article 100%; winners with a missing edition (partial) 83%; fewest-nations event 70%; winners at
-several Games 67%.
+document the public questions are about; no LLM writes a question or an answer.
+
+| Code | Accuracy | Full credit | Statuses right | Citation recall |
+|---|---|---|---|---|
+| `e890a5f` (frozen, used for the final runs) | **94.9%** | 36 of 39 | 38 of 39 | 0.97 |
+| `c0c43ec` (earlier) | 85.9% | 33 of 39 | 35 of 39 | 0.91 |
+
+On the earlier code, by kind: trends, repeat winners, gold leader per sport and 2028 events with no article 100%;
+winners with a missing edition (partial) 83%; fewest-nations event 70%; winners at several Games 67%. On the frozen
+code, two count / comparison questions get half credit and one partial question scores 0: the model gave an answer
+without citing it, so the grounding check withheld it.
+
+**Caveat:** the held-out set is no longer fully untouched. Some fixes made after the `c0c43ec` run (for example citing
+supporting evidence that an answer left uncited) were prompted by held-out misses, so 94.9% overstates performance on
+truly unseen questions. The hidden set remains the real test.
 
 ### Baselines: when does a question need an agent?
 
