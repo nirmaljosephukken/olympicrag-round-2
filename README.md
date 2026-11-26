@@ -107,6 +107,22 @@ the LLM.
 * LLM provider: `LLM_PROVIDER=gemini` (used for all results here; `gemini-3.1-flash-lite`); `anthropic` and `openai`
   are implemented but untested.
 
+## Demo page
+
+`docs/index.html` is one page in two modes:
+
+* **Read-only (public)**: served as static files (e.g. GitHub Pages from the `docs/` folder). It shows how the system
+  works, the graph counts, every result table (public runs, held-out, baselines, by style, repeatability) and an
+  explorer of every recorded answer (public and held-out): our answer, status, score against the published answer,
+  citations, explanation and the full trace with each TigerGraph query (parameters, rows, ms) and each LLM call
+  (tokens). No keys, no live calls: it reads `docs/data.json`, built from the committed result files by
+  `python scripts/build_demo.py`.
+* **Live (local)**: `./demo.sh` (or `python -m agr.web`) wakes the TigerGraph workspace, rebuilds `docs/data.json` and
+  serves the same page at http://localhost:8000 with an extra box: type a question, or pick a public / held-out one,
+  choose the pipeline (Agentic GraphRAG, or the GraphRAG / RAG baselines) and press Ask. The page shows the answer line,
+  citations with snippets, the trace and, for a published question, the published answer and our score. The browser
+  only talks to the local server; keys and the TigerGraph secret stay in `.env` on that machine.
+
 ## Results
 
 All scores are our own deterministic fact-by-fact scoring against the published public answers

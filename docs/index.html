@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OlympicRAG Round 2: agentic GraphRAG on TigerGraph</title>
+<style>
+  :root { --bg:#f7f7f5; --card:#fff; --ink:#1c1c1c; --muted:#6b6b6b; --line:#e3e3df; --accent:#1f5fbf;
+          --ok:#1d7a46; --warn:#a15c00; --bad:#b3261e; --tg:#f26b1d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:22px 28px 0; max-width:1180px; margin:auto; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:17px; margin:22px 0 10px; } h3 { font-size:15px; margin:14px 0 6px; }
+  .sub { color:var(--muted); margin:0 0 14px; }
+  nav { display:flex; gap:4px; border-bottom:1px solid var(--line); }
+  nav button { border:0; background:none; padding:10px 14px; font:inherit; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+  nav button.on { color:var(--ink); border-bottom-color:var(--accent); font-weight:600; }
+  main { max-width:1180px; margin:auto; padding:8px 28px 60px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px 18px; margin:12px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+  .stat b { display:block; font-size:22px; } .stat span { color:var(--muted); font-size:13px; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:13px; }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; border:1px solid var(--line); }
+  .answered { color:var(--ok); border-color:var(--ok); } .partial { color:var(--warn); border-color:var(--warn); }
+  .not_in_corpus { color:var(--muted); }
+  .tg { color:var(--tg); font-weight:600; }
+  select, input[type=text], textarea { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; width:100%; }
+  textarea { min-height:64px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .row > * { flex:1; }
+  button.go { flex:0 0 auto; background:var(--accent); color:#fff; border:0; border-radius:6px; padding:8px 16px; font:inherit; cursor:pointer; }
+  button.go:disabled { opacity:.5; cursor:wait; }
+  pre { white-space:pre-wrap; word-break:break-word; background:#fafaf8; border:1px solid var(--line); border-radius:6px; padding:8px; font-size:13px; margin:6px 0; }
+  .muted { color:var(--muted); } .small { font-size:13px; }
+  .notice { border-left:3px solid var(--accent); padding:8px 12px; background:#f2f6fc; border-radius:4px; }
+  .hidden { display:none; }
+  .list { max-height:520px; overflow:auto; }
+  .list div { padding:6px 8px; border-bottom:1px solid var(--line); cursor:pointer; font-size:14px; }
+  .list div:hover, .list div.on { background:#f2f6fc; }
+  .two { display:grid; grid-template-columns:340px 1fr; gap:14px; } .two > * { min-width:0; } @media (max-width:860px) { .two { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>OlympicRAG, Round 2: agentic GraphRAG on TigerGraph</h1>
+  <p class="sub">An orchestrator LLM answers questions over one TigerGraph graph of 3,530 documents by calling specialised graph tools; code checks every answer against the evidence it cites before it is released. <span id="mode" class="small"></span></p>
+  <nav id="tabs">
+    <button data-t="overview" class="on">Overview</button>
+    <button data-t="results">Results</button>
+    <button data-t="explore">Explore answers</button>
+    <button data-t="live">Ask a question</button>
+  </nav>
+</header>
+<main>
+  <section id="overview"></section>
+  <section id="results" class="hidden"></section>
+  <section id="explore" class="hidden">
+    <div class="two">
+      <div class="card"><div class="row"><select id="set"><option value="public">Public questions</option><option value="held-out">Held-out questions</option></select></div>
+        <div class="list" id="qlist"></div></div>
+      <div id="qview" class="card"><p class="muted">Pick a question on the left to see the recorded answer, its score against the published answer, its citations and the full trace.</p></div>
+    </div>
+  </section>
+  <section id="live" class="hidden">
+    <div class="card" id="liveoff">
+      <div class="notice">This page is a read-only copy. Live questions run on a machine with the system installed:
+        <pre>./demo.sh            # or: python -m agr.web</pre>
+        then open <b>http://localhost:8000</b>. The live page uses the same agent, TigerGraph graph and .env as <code>./run.sh</code>;
+        keys never leave that machine.</div>
+    </div>
+    <div class="card hidden" id="liveon">
+      <div class="row"><select id="pick"><option value="">Type a new question, or pick a public / held-out one ...</option></select></div>
+      <p></p><textarea id="q" placeholder="Ask a question about the corpus ..."></textarea>
+      <p></p><div class="row"><select id="pipe" style="flex:0 0 260px"><option value="agentic">Agentic GraphRAG (submitted system)</option><option value="graphrag">GraphRAG baseline (1 LLM call)</option><option value="rag">RAG baseline (1 LLM call)</option></select>
+        <span class="muted small" id="livestat"></span><button class="go" id="askbtn">Ask</button></div>
+    </div>
+    <div id="liveout"></div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => n == null ? "–" : (typeof n === "number" ? n.toLocaleString("en-US") : n);
+const pct = n => n == null ? "–" : n.toFixed(1) + "%";
+let DATA = null, LIVE = false;
+
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["overview","results","explore","live"].forEach(t => $("#"+t).classList.toggle("hidden", t !== b.dataset.t));
+});
+
+function overview() {
+  const g = DATA.graph_counts || {}, run = DATA.runs[0] || {};
+  const v = g.vertices || {}, e = g.edges || {};
+  $("#overview").innerHTML = `
+  <div class="grid" style="margin-top:14px">
+    <div class="stat"><b>${pct(run.accuracy_pct)}</b><span>public accuracy, latest full run (strict scorer)</span></div>
+    <div class="stat"><b>${pct((DATA.runs.find(r=>r.name.startsWith("Held-out"))||{}).accuracy_pct)}</b><span>held-out questions (answers computed by code)</span></div>
+    <div class="stat"><b>${fmt(run.latency_ms_p50 && Math.round(run.latency_ms_p50/100)/10)} s</b><span>median latency per question</span></div>
+    <div class="stat"><b>${fmt(run.tokens_per_question_avg)}</b><span>tokens per question</span></div>
+    <div class="stat"><b>${fmt(g.vertices_total)}</b><span>vertices, ${fmt(g.edges_total)} edges in graph ${esc(g.graph||"")}</span></div>
+  </div>
+  <div class="card"><h2>How it works</h2>
+    <h3>1. Documents become graph data, by code (no LLM)</h3>
+    <p>Olympic infoboxes become <b>Event</b>, <b>Games</b>, <b>Sport</b>, <b>Venue</b>, <b>Athlete</b> and <b>Nation</b> vertices with medal and edition edges; film and officeholder infoboxes become <b>Film</b>, <b>Person</b> and <b>OfficeTerm</b>; the LA 2028 source records become <b>SourceRecord</b> vertices with source, publication time and a reliability tier, linked to the one event they name. Every document is also split into <b>Chunk</b>s with a vector (TigerGraph HNSW index).</p>
+    <table><tr><th>Vertex</th><th class="n">Count</th><th>Edge</th><th class="n">Count</th></tr>
+    ${Object.keys(v).map((k,i) => `<tr><td>${k}</td><td class="n">${fmt(v[k])}</td><td>${Object.keys(e)[i]||""}</td><td class="n">${fmt(e[Object.keys(e)[i]])}</td></tr>`).join("")}
+    ${Object.keys(e).slice(Object.keys(v).length).map(k => `<tr><td></td><td></td><td>${k}</td><td class="n">${fmt(e[k])}</td></tr>`).join("")}
+    </table>
+    <h3>2. The agent</h3>
+    <p>The entity linker (code) finds the years, sports, venues, events, people and films a question names. Then, for up to 8 steps, the orchestrator picks one tool at a time: graph search, event profile, edition chains, rankings and medal tables computed in GSQL and code, repeat winners, per-edition trends, film and office lookups, source records with tiers, exact text search and vector search. Every TigerGraph call goes through the TigerGraph MCP server and is logged.</p>
+    <h3>3. Checks in code before an answer is released</h3>
+    <p>Every name and number in the answer must be stated in an evidence item it cites; a name paired with a medal must hold that medal; a full table must be answered completely; the status (answered / partial / not_in_corpus) follows from which asked facts the evidence states; before <i>not_in_corpus</i> is accepted, code searches every name in the question, runs a similarity search and reads the source records. The evidence policy: the most authoritative source for the time asked wins, a later publication does not override a signed decision, registrations are not starters, missing evidence is not a negative fact.</p>
+  </div>`;
+}
+
+function results() {
+  const rows = DATA.runs.map(r => `<tr><td>${esc(r.name)}</td><td><code>${esc(r.code)}</code></td><td class="n">${pct(r.accuracy_pct)}</td><td class="n">${fmt(r.full_credit)}</td><td class="n">${fmt(r.status_matches)}</td>
+    <td class="n">${r.citation_precision_avg==null?"–":r.citation_precision_avg.toFixed(2)} / ${r.citation_recall_avg==null?"–":r.citation_recall_avg.toFixed(2)}</td>
+    <td class="n">${fmt(r.tokens_per_question_avg)}</td><td class="n">${fmt(r.tokens_per_correct_answer)}</td>
+    <td class="n">${r.latency_ms_p50?(r.latency_ms_p50/1000).toFixed(1)+" / "+(r.latency_ms_p95/1000).toFixed(1)+" s":"–"}</td></tr>`).join("");
+  const styles = [...new Set(DATA.runs.flatMap(r => Object.keys(r.accuracy_by_style||{})))].sort();
+  const sty = styles.map(s => `<tr><td>${esc(s)}</td>${DATA.runs.map(r => `<td class="n">${r.accuracy_by_style&&r.accuracy_by_style[s]?pct(r.accuracy_by_style[s].accuracy_pct)+` <span class="muted small">(${r.accuracy_by_style[s].questions})</span>`:"–"}</td>`).join("")}</tr>`).join("");
+  const rep = DATA.repeatability || {};
+  $("#results").innerHTML = `
+  <div class="card"><h2>Runs</h2>
+    <p class="small muted">Accuracy is our own strict fact-by-fact scoring against the published answers (partial credit per fact). An LLM-judge re-score of the latest full run gives 90.3%. Citation precision / recall compare cited documents with the published supporting documents. Latency of runs A and B is not representative: Gemini's free tier was 5-10x slower during those runs.</p>
+    <table><tr><th>Run</th><th>Code</th><th class="n">Accuracy</th><th class="n">Full credit</th><th class="n">Status right</th><th class="n">Citations P / R</th><th class="n">Tokens / q</th><th class="n">Tokens / correct</th><th class="n">Latency p50 / p95</th></tr>${rows}</table></div>
+  <div class="card"><h2>By answer style</h2><p class="small muted">Style is read from the shape of the published answer (number of questions in brackets).</p>
+    <table><tr><th>Style</th>${DATA.runs.map(r=>`<th class="n">${esc(r.name.replace("Public, ","").replace(" (39 questions, answers computed by code)",""))}</th>`).join("")}</tr>${sty}</table></div>
+  <div class="card"><h2>Repeatability</h2><p>Two independent full runs on the same code (A and B): accuracy ${pct(rep.accuracy_a_pct)} and ${pct(rep.accuracy_b_pct)}; same status on ${fmt(rep.same_status)} of ${fmt(rep.questions)} questions, same score on ${fmt(rep.same_score)}, same citations on ${fmt(rep.same_citations)}. The movement is almost entirely in explanation and source-reliability questions.</p></div>`;
+}
+
+function statusPill(s) { return `<span class="pill ${esc(s)}">${esc(s)}</span>`; }
+function traceTable(trace) {
+  return `<table><tr><th>#</th><th>Step</th><th>Details</th><th class="n">ms</th></tr>` + (trace||[]).map(s => {
+    let d = "";
+    if (s.tigergraph) d = `<span class="tg">TigerGraph</span> <code>${esc(s.query)}</code> ${esc(JSON.stringify(s.params))} → ${fmt(s.rows)} rows <span class="muted small">${esc(s.via||"")}</span>`;
+    else if (s.input_tokens != null) d = `LLM ${esc(s.decision||"")}: ${fmt(s.input_tokens)} in / ${fmt(s.output_tokens)} out tokens`;
+    else if (s.tool === "evidence_evaluator") d = s.ok ? "grounding check passed" : "grounding check rejected the answer";
+    else d = "code step";
+    return `<tr><td>${s.step}</td><td>${esc(s.tool)}</td><td>${d}</td><td class="n">${fmt(Math.round(s.ms||0))}</td></tr>`;
+  }).join("") + `</table>`;
+}
+function answerBlock(a, gold) {
+  const tg = (a.trace||[]).filter(s=>s.tigergraph).length, llm = (a.trace||[]).filter(s=>s.input_tokens!=null).length;
+  let h = `<p>${statusPill(a.status)} ${a.score!=null?`<span class="pill">score ${a.score.toFixed(2)}</span>`:""}
+     <span class="muted small">${fmt(a.latency_ms)} ms · ${fmt(a.input_tokens+a.output_tokens)} tokens · ${llm} LLM calls · ${tg} TigerGraph queries</span></p>
+     <h3>Answer</h3><pre>${esc(a.answer==null?"(not in the corpus)":a.answer)}</pre>
+     <h3>Explanation</h3><p class="small">${esc(a.explanation)}</p>
+     <h3>Citations</h3><p class="small">${(a.citations||[]).map(esc).join(", ")||"–"}</p>`;
+  if (a.citation_snippets && a.citation_snippets.length) h += a.citation_snippets.map(c=>`<pre><b>${esc(c.title)}</b> (${esc(c.doc_id)})\n${esc(c.text)}</pre>`).join("");
+  if (gold) h += `<h3>Published answer</h3><p>${statusPill(gold.status)}</p><pre>${esc(JSON.stringify(gold.answer, null, 1))}</pre><p class="small muted">Supporting documents: ${(gold.docs||[]).map(esc).join(", ")||"–"}</p>`;
+  h += `<h3>Trace</h3>` + traceTable(a.trace);
+  return h;
+}
+
+function explore() {
+  const set = $("#set").value, list = DATA.answers.filter(a => a.set === set);
+  $("#qlist").innerHTML = list.map((a,i) => `<div data-i="${DATA.answers.indexOf(a)}">${esc(a.qid)} ${a.score!=null?`<span class="muted small">(${a.score.toFixed(2)})</span>`:""}<br><span class="small">${esc(a.question)}</span></div>`).join("");
+  document.querySelectorAll("#qlist div").forEach(d => d.onclick = () => {
+    document.querySelectorAll("#qlist div").forEach(x => x.classList.toggle("on", x === d));
+    const a = DATA.answers[+d.dataset.i];
+    $("#qview").innerHTML = `<h2>${esc(a.qid)}</h2><p><b>${esc(a.question)}</b></p>` + answerBlock(a, {status:a.gold_status, answer:a.gold_answer, docs:a.gold_docs});
+  });
+}
+$("#set").onchange = explore;
+
+async function initLive() {
+  const bases = location.protocol.startsWith("http") && location.hostname === "localhost" ? [""] : ["http://localhost:8000"];
+  for (const b of bases) {
+    try {
+      const r = await fetch(b + "/api/status", {cache:"no-store"});
+      if (r.ok) { const s = await r.json(); LIVE = b; $("#mode").textContent = `· live: graph ${s.graph}, model ${s.model}, ${s.keys} key(s)`;
+        $("#liveoff").classList.add("hidden"); $("#liveon").classList.remove("hidden"); return; }
+    } catch (e) {}
+  }
+  $("#mode").textContent = "· read-only copy (recorded answers)";
+}
+function fillPick() {
+  $("#pick").innerHTML += DATA.answers.map(a => `<option value="${esc(a.qid)}">${esc(a.set)} · ${esc(a.qid)} · ${esc(a.question.slice(0,90))}</option>`).join("");
+  $("#pick").onchange = () => { const a = DATA.answers.find(x => x.qid === $("#pick").value); if (a) $("#q").value = a.question; };
+}
+$("#askbtn").onclick = async () => {
+  const q = $("#q").value.trim(); if (!q) return;
+  const qid = (DATA.answers.find(x => x.qid === $("#pick").value && x.question === q) || {}).qid || "";
+  $("#askbtn").disabled = true; $("#livestat").textContent = "working (TigerGraph + LLM) ...";
+  const t0 = Date.now();
+  try {
+    const r = await fetch(LIVE + "/api/ask", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({question:q, pipeline:$("#pipe").value, qid})});
+    const a = await r.json();
+    $("#liveout").innerHTML = a.error ? `<div class="card"><p class="bad">${esc(a.error)}</p></div>` :
+      `<div class="card"><h2>${esc(a.pipeline)} · ${((Date.now()-t0)/1000).toFixed(1)} s</h2><p><b>${esc(q)}</b></p>` + answerBlock(a, a.gold) + `</div>`;
+  } catch (e) { $("#liveout").innerHTML = `<div class="card"><p>${esc(e)}</p></div>`; }
+  $("#askbtn").disabled = false; $("#livestat").textContent = "";
+};
+
+fetch("data.json").then(r => r.json()).then(d => { DATA = d; overview(); results(); explore(); fillPick(); initLive(); });
+</script>
+</body>
+</html>
