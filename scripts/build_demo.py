@@ -28,6 +28,7 @@ def load_json(p: Path):
 def answers_with_gold(answers: Path, questions: Path, score: Path, label: str) -> list[dict]:
     qs = {q["qid"]: q for q in load_jsonl(questions)}
     sc = {r["qid"]: r for r in (load_json(score) or {}).get("questions", [])}
+    full = {r["qid"]: r for r in load_jsonl(answers.with_suffix(".full.jsonl"))}
     out = []
     for a in load_jsonl(answers):
         q = qs.get(a["qid"], {})
@@ -36,7 +37,10 @@ def answers_with_gold(answers: Path, questions: Path, score: Path, label: str) -
                     "gold_answer": q.get("answer"), "gold_docs": q.get("gold_doc_ids", []), "status": a["status"],
                     "answer": a["answer"], "explanation": a["explanation"], "citations": a["citations"],
                     "score": s.get("score"), "style": s.get("style"), "input_tokens": a["input_tokens"],
-                    "output_tokens": a["output_tokens"], "latency_ms": a["latency_ms"], "trace": a["trace"]})
+                    "output_tokens": a["output_tokens"], "latency_ms": a["latency_ms"], "trace": a["trace"],
+                    "missing": full.get(a["qid"], {}).get("missing", []),
+                    "stop_reason": full.get(a["qid"], {}).get("stop_reason", ""),
+                    "grounding": full.get(a["qid"], {}).get("grounding", "")})
     return out
 
 
@@ -76,6 +80,8 @@ def main() -> int:
              **summary(r / "score_baseline_graphrag.json", r / "metrics_baseline_graphrag.json")},
         ],
         "repeatability": (load_json(r / "compare_A_B.json") or {}).get("summary"),
+        "repeatability_rows": [{k: q.get(k) for k in ("qid", "score_a", "score_b", "status_a", "status_b")}
+                               for q in (load_json(r / "compare_A_B.json") or {}).get("questions", [])],
         "answers": answers_with_gold(ROOT / "answers_public.jsonl", ROOT / "data/questions/questions_public.jsonl",
                                      r / "score_public.json", "public")
         + answers_with_gold(r / "answers_heldout.jsonl", ROOT / "data/questions/questions_heldout.jsonl",
