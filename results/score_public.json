@@ -2,18 +2,18 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 82.5,
-  "full_credit": 35,
-  "status_matches": 45,
+  "accuracy_pct": 89.9,
+  "full_credit": 40,
+  "status_matches": 48,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
-  "citation_precision_avg": 0.73,
-  "citation_recall_avg": 0.81,
+  "citation_precision_avg": 0.755,
+  "citation_recall_avg": 0.87,
   "citation_method": "cited doc_ids vs gold_doc_ids, averaged over questions that have gold documents",
   "grounding_report": {
-   "supported by cited evidence": 42,
-   "not_in_corpus": 8
+   "supported by cited evidence": 44,
+   "not_in_corpus": 6
   },
-  "tokens_per_correct_answer": 10687,
+  "tokens_per_correct_answer": 8501,
   "accuracy_by_style": {
    "count / comparison": {
     "questions": 10,
@@ -24,13 +24,12 @@
    },
    "explanation": {
     "questions": 12,
-    "accuracy_pct": 63.9,
+    "accuracy_pct": 71.6,
     "failing": [
      "r2-pub-022",
-     "r2-pub-023",
-     "r2-pub-024",
      "r2-pub-039",
      "r2-pub-041",
+     "r2-pub-043",
      "r2-pub-044",
      "r2-pub-047",
      "r2-pub-050"
@@ -38,10 +37,9 @@
    },
    "list": {
     "questions": 13,
-    "accuracy_pct": 94.9,
+    "accuracy_pct": 97.4,
     "failing": [
-     "r2-pub-014",
-     "r2-pub-016"
+     "r2-pub-014"
     ]
    },
    "not_in_corpus": {
@@ -51,19 +49,15 @@
    },
    "partial": {
     "questions": 2,
-    "accuracy_pct": 30.0,
+    "accuracy_pct": 50.0,
     "failing": [
-     "r2-pub-029",
      "r2-pub-048"
     ]
    },
    "short factual": {
     "questions": 5,
-    "accuracy_pct": 60.0,
-    "failing": [
-     "r2-pub-030",
-     "r2-pub-037"
-    ]
+    "accuracy_pct": 100.0,
+    "failing": []
    },
    "trend across editions": {
     "questions": 4,
@@ -110,7 +104,7 @@
    "citation_precision": 0.867,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4844
+   "tokens": 5077
   },
   {
    "qid": "r2-pub-002",
@@ -133,7 +127,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4528
+   "tokens": 4672
   },
   {
    "qid": "r2-pub-003",
@@ -180,7 +174,7 @@
    "citation_precision": 0.444,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4882
+   "tokens": 4918
   },
   {
    "qid": "r2-pub-004",
@@ -208,10 +202,10 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 0.4,
+   "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 10390
+   "tokens": 15318
   },
   {
    "qid": "r2-pub-005",
@@ -242,7 +236,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4885
+   "tokens": 4971
   },
   {
    "qid": "r2-pub-006",
@@ -265,7 +259,7 @@
    "citation_precision": 0.444,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4779
+   "tokens": 4911
   },
   {
    "qid": "r2-pub-007",
@@ -288,7 +282,7 @@
    "citation_precision": 0.643,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4755
+   "tokens": 4814
   },
   {
    "qid": "r2-pub-008",
@@ -339,7 +333,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4914
+   "tokens": 4891
   },
   {
    "qid": "r2-pub-009",
@@ -394,7 +388,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4834
+   "tokens": 5462
   },
   {
    "qid": "r2-pub-010",
@@ -442,10 +436,10 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 0.5,
+   "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 9351
+   "tokens": 5768
   },
   {
    "qid": "r2-pub-011",
@@ -500,7 +494,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 13986
+   "tokens": 5263
   },
   {
    "qid": "r2-pub-012",
@@ -555,7 +549,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4802
+   "tokens": 7977
   },
   {
    "qid": "r2-pub-013",
@@ -598,7 +592,7 @@
    "citation_precision": 0.778,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5275
+   "tokens": 5332
   },
   {
    "qid": "r2-pub-014",
@@ -629,7 +623,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4821
+   "tokens": 4900
   },
   {
    "qid": "r2-pub-015",
@@ -656,46 +650,46 @@
    "citation_precision": 0.75,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4902
+   "tokens": 4959
   },
   {
    "qid": "r2-pub-016",
    "style": "list",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.667,
+   "score": 1.0,
    "facts": [
     [
      "{\"year\": 2008, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ],
     [
      "{\"year\": 2008, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ],
     [
      "{\"year\": 2012, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ],
     [
      "{\"year\": 2012, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ],
     [
      "{\"year\": 2016, \"event\": \"Men's 100 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ],
     [
      "{\"year\": 2016, \"event\": \"Men's 200 metres\", \"medal\": \"gold\"}",
-     0.67
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.667,
+   "deterministic": 1.0,
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4865
+   "tokens": 5108
   },
   {
    "qid": "r2-pub-017",
@@ -714,7 +708,7 @@
    "citation_precision": 1.0,
    "citation_recall": 0.2,
    "grounding": "supported by cited evidence",
-   "tokens": 5229
+   "tokens": 5195
   },
   {
    "qid": "r2-pub-018",
@@ -737,7 +731,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 6845
+   "tokens": 7130
   },
   {
    "qid": "r2-pub-019",
@@ -760,7 +754,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4482
+   "tokens": 4580
   },
   {
    "qid": "r2-pub-020",
@@ -779,7 +773,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 11639
+   "tokens": 13075
   },
   {
    "qid": "r2-pub-021",
@@ -798,7 +792,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7269
+   "tokens": 5068
   },
   {
    "qid": "r2-pub-022",
@@ -817,45 +811,45 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 15315
+   "tokens": 11768
   },
   {
    "qid": "r2-pub-023",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.893,
+   "score": 1.0,
    "facts": [
     [
      "text",
-     0.89
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.893,
+   "deterministic": 1.0,
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7806
+   "tokens": 5499
   },
   {
    "qid": "r2-pub-024",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.714,
+   "score": 1.0,
    "facts": [
     [
      "text",
-     0.71
+     1.0
     ]
    ],
    "why": "",
-   "deterministic": 0.714,
+   "deterministic": 1.0,
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 10274
+   "tokens": 5459
   },
   {
    "qid": "r2-pub-025",
@@ -878,7 +872,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5007
+   "tokens": 5028
   },
   {
    "qid": "r2-pub-026",
@@ -901,7 +895,7 @@
    "citation_precision": 0.333,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4796
+   "tokens": 4856
   },
   {
    "qid": "r2-pub-027",
@@ -924,7 +918,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4692
+   "tokens": 4727
   },
   {
    "qid": "r2-pub-028",
@@ -938,14 +932,14 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 17694
+   "tokens": 19748
   },
   {
    "qid": "r2-pub-029",
    "style": "partial",
    "gold_status": "partial",
    "status": "partial",
-   "score": 0.6,
+   "score": 1.0,
    "facts": [
     [
      "{\"year\": 2004, \"gold\": \"Keiji Suzuki\"}",
@@ -953,11 +947,11 @@
     ],
     [
      "{\"year\": 2012, \"gold\": \"Teddy Riner\"}",
-     0.0
+     1.0
     ],
     [
      "{\"year\": 2016, \"gold\": \"Teddy Riner\"}",
-     0.0
+     1.0
     ],
     [
      "missing:2008",
@@ -969,25 +963,30 @@
     ]
    ],
    "why": "",
-   "deterministic": 0.6,
-   "citation_precision": 1.0,
-   "citation_recall": 0.333,
+   "deterministic": 1.0,
+   "citation_precision": 0.3,
+   "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 22394
+   "tokens": 25615
   },
   {
    "qid": "r2-pub-030",
    "style": "short factual",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
-   "grounding": "not_in_corpus",
-   "tokens": 25065
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Ron Howard",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 0.143,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 8246
   },
   {
    "qid": "r2-pub-031",
@@ -1001,7 +1000,7 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 8412
+   "tokens": 12038
   },
   {
    "qid": "r2-pub-032",
@@ -1028,7 +1027,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4518
+   "tokens": 4690
   },
   {
    "qid": "r2-pub-033",
@@ -1051,7 +1050,7 @@
    "citation_precision": 0.286,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4934
+   "tokens": 7797
   },
   {
    "qid": "r2-pub-034",
@@ -1078,7 +1077,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4653
+   "tokens": 4780
   },
   {
    "qid": "r2-pub-035",
@@ -1101,7 +1100,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4993
+   "tokens": 5159
   },
   {
    "qid": "r2-pub-036",
@@ -1120,21 +1119,26 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4498
+   "tokens": 5155
   },
   {
    "qid": "r2-pub-037",
    "style": "short factual",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
-   "grounding": "not_in_corpus",
-   "tokens": 20114
+   "status": "answered",
+   "score": 1.0,
+   "facts": [
+    [
+     "Xinyi Gu",
+     1.0
+    ]
+   ],
+   "why": "",
+   "deterministic": 1.0,
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 4870
   },
   {
    "qid": "r2-pub-038",
@@ -1153,7 +1157,7 @@
    "citation_precision": 0.111,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 9592
+   "tokens": 10159
   },
   {
    "qid": "r2-pub-039",
@@ -1169,10 +1173,10 @@
    ],
    "why": "",
    "deterministic": 0.612,
-   "citation_precision": 0.5,
+   "citation_precision": 0.25,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 8088
+   "tokens": 5742
   },
   {
    "qid": "r2-pub-040",
@@ -1188,29 +1192,29 @@
    ],
    "why": "",
    "deterministic": 1.0,
-   "citation_precision": 0.333,
+   "citation_precision": 1.0,
    "citation_recall": 0.5,
    "grounding": "supported by cited evidence",
-   "tokens": 8064
+   "tokens": 5705
   },
   {
    "qid": "r2-pub-041",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.26,
+   "score": 0.325,
    "facts": [
     [
      "text",
-     0.26
+     0.32
     ]
    ],
    "why": "",
-   "deterministic": 0.26,
+   "deterministic": 0.325,
    "citation_precision": 0.5,
    "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 5930
+   "tokens": 6043
   },
   {
    "qid": "r2-pub-042",
@@ -1233,40 +1237,45 @@
    "citation_precision": 0.667,
    "citation_recall": 0.667,
    "grounding": "supported by cited evidence",
-   "tokens": 8166
+   "tokens": 5729
   },
   {
    "qid": "r2-pub-043",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 1.0,
+   "score": 0.989,
    "facts": [
     [
      "text",
-     1.0
+     0.99
     ]
    ],
    "why": "",
-   "deterministic": 1.0,
+   "deterministic": 0.989,
    "citation_precision": 1.0,
-   "citation_recall": 0.5,
+   "citation_recall": 0.75,
    "grounding": "supported by cited evidence",
-   "tokens": 8437
+   "tokens": 6127
   },
   {
    "qid": "r2-pub-044",
    "style": "explanation",
    "gold_status": "answered",
-   "status": "not_in_corpus",
-   "score": 0.0,
-   "facts": [],
-   "why": "answered not_in_corpus",
-   "deterministic": 0.0,
-   "citation_precision": 0.0,
-   "citation_recall": 0.0,
-   "grounding": "not_in_corpus",
-   "tokens": 15584
+   "status": "answered",
+   "score": 0.714,
+   "facts": [
+    [
+     "text",
+     0.71
+    ]
+   ],
+   "why": "",
+   "deterministic": 0.714,
+   "citation_precision": 0.2,
+   "citation_recall": 1.0,
+   "grounding": "supported by cited evidence",
+   "tokens": 5768
   },
   {
    "qid": "r2-pub-045",
@@ -1293,7 +1302,7 @@
    "citation_precision": 1.0,
    "citation_recall": 0.667,
    "grounding": "supported by cited evidence",
-   "tokens": 7914
+   "tokens": 5493
   },
   {
    "qid": "r2-pub-046",
@@ -1307,7 +1316,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "not_in_corpus",
-   "tokens": 11357
+   "tokens": 9031
   },
   {
    "qid": "r2-pub-047",
@@ -1321,34 +1330,21 @@
    "citation_precision": 0.0,
    "citation_recall": 0.0,
    "grounding": "not_in_corpus",
-   "tokens": 30201
+   "tokens": 26734
   },
   {
    "qid": "r2-pub-048",
    "style": "partial",
    "gold_status": "partial",
-   "status": "answered",
+   "status": "not_in_corpus",
    "score": 0.0,
-   "facts": [
-    [
-     "11-minute pause (unverified spectator)",
-     0.0
-    ],
-    [
-     "14-minute pause (unverified volunteer)",
-     0.0
-    ],
-    [
-     "status=partial",
-     0.0
-    ]
-   ],
-   "why": "",
+   "facts": [],
+   "why": "answered not_in_corpus",
    "deterministic": 0.0,
-   "citation_precision": 1.0,
-   "citation_recall": 1.0,
-   "grounding": "supported by cited evidence",
-   "tokens": 11579
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": "not_in_corpus",
+   "tokens": 13019
   },
   {
    "qid": "r2-pub-049",
@@ -1362,26 +1358,26 @@
    "citation_precision": 1.0,
    "citation_recall": 0.333,
    "grounding": "not_in_corpus",
-   "tokens": 11641
+   "tokens": 9325
   },
   {
    "qid": "r2-pub-050",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.476,
+   "score": 0.238,
    "facts": [
     [
      "text",
-     0.48
+     0.24
     ]
    ],
    "why": "",
-   "deterministic": 0.476,
+   "deterministic": 0.238,
    "citation_precision": 1.0,
    "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 7069
+   "tokens": 8231
   }
  ]
 }

@@ -191,7 +191,7 @@
 
 <section id="results" class="hidden">
   <h2>Accuracy across runs</h2>
-  <p class="sec-sub">Strict fact-by-fact scoring against the published answers (partial credit per fact). An LLM judge re-scores the latest public run at 90.3%; the official score uses the organisers' key.</p>
+  <p class="sec-sub">Strict fact-by-fact scoring against the published answers (partial credit per fact). An LLM judge re-scored the earlier fast-period run (06930bd) at 90.3% against 82.5% strict; the official score uses the organisers' key.</p>
   <p class="sec-sub" id="hoNote"></p>
   <div class="card chart"><svg id="runsChart" width="100%" role="img" aria-label="Accuracy by run"></svg></div>
 
@@ -207,8 +207,8 @@
     <div class="matrix" id="matrix"></div>
     <div class="legend"><span>each tile = one public question; top half run A, bottom half run B; darker = higher score</span></div></div>
   <div class="cols">
-    <div class="card chart"><h3>Time per question (latest full run)</h3><svg id="latDist" width="100%"></svg></div>
-    <div class="card chart"><h3>Tokens per question (latest full run)</h3><svg id="tokDist" width="100%"></svg></div>
+    <div class="card chart"><h3>Time per question (final submitted run)</h3><svg id="latDist" width="100%"></svg></div>
+    <div class="card chart"><h3>Tokens per question (final submitted run)</h3><svg id="tokDist" width="100%"></svg></div>
   </div>
   <details class="card"><summary>All run figures as a table</summary><div id="runsTable"></div></details>
 </section>
@@ -387,7 +387,7 @@ function drawResults() {
   hbar($("#runsChart"), R.map(r => ({label: short(r.name), value: r.accuracy_pct, color: color(r.name),
     tip: `<b>${esc(short(r.name))}</b><br>accuracy ${pct(r.accuracy_pct)} · full credit ${fmt(r.full_credit)}<br>status right ${fmt(r.status_matches)} · code ${esc(r.code)}`})),
     {max: 100, step: 20, tick: t => t + "%", fmt: v => pct(v), left: 280});
-  // grouped bars by style: agent (fast-period run), GraphRAG, RAG
+  // grouped bars by style: agent (final run), GraphRAG, RAG
   const agent = R[0], gr = R.find(x => x.name.includes("GraphRAG")), rag = R.find(x => x.name.includes("RAG (") && !x.name.includes("Graph"));
   const series = [["Agentic GraphRAG", agent, css("--series-1")], ["GraphRAG", gr, css("--series-2")], ["RAG", rag, css("--series-3")]];
   const styles = Object.keys(agent.accuracy_by_style || {}).sort((a, b) => (agent.accuracy_by_style[b].accuracy_pct - (rag.accuracy_by_style[b]||{}).accuracy_pct) - (agent.accuracy_by_style[a].accuracy_pct - (rag.accuracy_by_style[a]||{}).accuracy_pct));
@@ -422,7 +422,7 @@ function drawResults() {
   strip($("#tokDist"), pubAns.map(a => ({v: (a.input_tokens + a.output_tokens) / 1000, q: a.qid})), "k tokens", 5);
   $("#runsTable").innerHTML = `<table><tr><th>Run</th><th>Code</th><th class="n">Accuracy</th><th class="n">Full credit</th><th class="n">Status right</th><th class="n">Citations P / R</th><th class="n">Tokens / q</th><th class="n">Tokens / correct</th><th class="n">Latency p50 / p95</th></tr>` +
     R.map(r => `<tr><td>${esc(r.name)}</td><td><code>${esc(r.code)}</code></td><td class="n">${pct(r.accuracy_pct)}</td><td class="n">${fmt(r.full_credit)}</td><td class="n">${fmt(r.status_matches)}</td><td class="n">${(r.citation_precision_avg||0).toFixed(2)} / ${(r.citation_recall_avg||0).toFixed(2)}</td><td class="n">${fmt(r.tokens_per_question_avg)}</td><td class="n">${fmt(r.tokens_per_correct_answer)}</td><td class="n">${r.latency_ms_p50 ? (r.latency_ms_p50/1000).toFixed(1) + " / " + (r.latency_ms_p95/1000).toFixed(1) + " s" : "–"}</td></tr>`).join("") +
-    `</table><p class="small muted">Latency of runs A / B and the held-out run is not representative: Gemini's free tier was 5-10x slower during those runs.</p>`;
+    `</table><p class="small muted">Latency depends on Gemini's free tier, which varies 5-10x by time of day: in the final run most questions took 4-10 s but a few calls stalled for over a minute (p95), while the earlier fast-period run had p95 18.7 s. Rate-limit waits happen before a question starts and are not in these times.</p>`;
 }
 
 function strip(svg, pts, unit, step) {   // one dot per question on a value axis, with the median marked
