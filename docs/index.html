@@ -279,28 +279,6 @@ function arrow(svg, d, pulse = true) { el("path", {d, class: "flow-edge", "marke
 function defs(svg) { const d = el("defs", {}, svg); const m = el("marker", {id: "ah", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse"}, d);
   el("path", {d: "M0,0 L10,5 L0,10 z", fill: css("--line-2")}, m); }
 
-function drawPipeline() {
-  const s = $("#pipeline"); s.innerHTML = ""; defs(s);
-  const g = DATA.graph_counts || {}, W = 145, gap = 19, y = 60, h = 120;
-  const items = [
-    ["Corpus", ["3,530 documents", "Wikipedia + LA 2028", "source records"], "code", "INPUT"],
-    ["Parse & embed", ["infoboxes, headers,", "chunks, vectors", "no LLM"], "code", "CODE"],
-    ["TigerGraph", [fmt(g.vertices_total) + " vertices", fmt(g.edges_total) + " edges", "HNSW vector index"], "tg", "GRAPH"],
-    ["20 graph tools", ["installed GSQL queries", "via TigerGraph MCP", "rank / count in code"], "tg", "TOOLS"],
-    ["Orchestrator", ["picks 1 tool per turn", "≤ 8 steps", "Gemini flash-lite"], "llm", "LLM"],
-    ["Code checks", ["grounding, medal role,", "completeness, status", "min. search"], "code", "CODE"],
-    ["Answer", ["status, citations,", "explanation, trace,", "query log"], "code", "OUTPUT"]];
-  items.forEach((it, i) => { const x = 8 + i * (W + gap); node(s, x, y, W, h, ...it);
-    if (i < items.length - 1) arrow(s, `M${x + W + 2},${y + h / 2} L${x + W + gap - 2},${y + h / 2}`); });
-  // feedback arc: checks -> orchestrator
-  const xo = 8 + 4 * (W + gap) + W / 2, xc = 8 + 5 * (W + gap) + W / 2;
-  arrow(s, `M${xc},${y + h + 2} C${xc},${y + h + 50} ${xo},${y + h + 50} ${xo},${y + h + 4}`);
-  txt(s, (xo + xc) / 2, y + h + 58, "rejected → reason sent back", "s", "middle").setAttribute("fill", css("--text-secondary"));
-  const xt = 8 + 3 * (W + gap) + W / 2;
-  arrow(s, `M${xo},${y - 2} C${xo},${y - 40} ${xt},${y - 40} ${xt},${y - 4}`);
-  txt(s, (xo + xt) / 2, y - 36, "tool call ↔ observation", "s", "middle").setAttribute("fill", css("--text-secondary"));
-}
-
 function drawSchema() {
   const s = $("#schema"); s.innerHTML = ""; defs(s);
   const v = (DATA.graph_counts || {}).vertices || {}, e = (DATA.graph_counts || {}).edges || {};
