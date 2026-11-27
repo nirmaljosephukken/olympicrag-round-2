@@ -47,7 +47,7 @@ Keep a second terminal open in the repository for the commands below.
 | Problem | What to do |
 |---|---|
 | First call hangs for a minute | The workspace was suspended; `./demo.sh` and `./run.sh` wait for it (up to `TG_WAKE_MAX_S`). |
-| Gemini slow (a step over 20 s) | Free-tier latency varies 5-10x by time of day. Keep talking through the recorded traces in *Explore answers* while it runs; a hung request is abandoned after `LLM_TIMEOUT_S` (45 s) and retried. |
+| Gemini slow (a step over 20 s) | Free-tier latency varies 5-10x by time of day. Keep talking through the recorded traces in *Explore answers* while it runs; a hung request is abandoned after `LLM_TIMEOUT_S` (20 s) and retried at once on another key. |
 | "daily quota exhausted on every key" | Add another key to `GEMINI_API_KEYS` in `.env` and restart `./demo.sh`. |
 | TigerGraph MCP call times out | It falls back to RESTPP automatically after `TG_MCP_TIMEOUT_S`. |
 | Nothing live works | The page still shows every recorded answer and trace; the published copy needs no server. |

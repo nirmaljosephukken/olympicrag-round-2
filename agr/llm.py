@@ -49,6 +49,13 @@ def _gemini_keys() -> list[str]:
 _KEYS = _gemini_keys()
 
 
+# seconds before a hung LLM request is abandoned and retried on another key. Free-tier Gemini calls normally take 1-4 s;
+# a call that is still running after 20 s usually hangs until any limit (in the final runs: 25 of 307 calls hung to the
+# old 45 s limit, and only 8 calls took longer than 20 s and still succeeded).
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "20"))
+STALL_REST_S = float(os.getenv("LLM_STALL_REST_S", "30"))   # how long a key that hung rests before it is used again
+
+
 class KeyPool:
     """Chooses the key for each call: the fastest usable key with a free per-minute slot."""
 
@@ -103,6 +110,13 @@ class KeyPool:
 
     def report(self, i: int, ms: float) -> None:
         with _lock:
+            self.ewma[i] = ms if self.ewma[i] is None else 0.7 * self.ewma[i] + 0.3 * ms
+
+    def stalled(self, i: int, ms: float) -> None:
+        """A request on this key hung until the timeout: the key rests briefly and counts as slow, so the retry goes to
+        another key (with one key, the retry waits for the rest to end)."""
+        with _lock:
+            self.cool_until[i] = self.clock() + STALL_REST_S
             self.ewma[i] = ms if self.ewma[i] is None else 0.7 * self.ewma[i] + 0.3 * ms
 
     def rate_limited(self, i: int) -> None:
@@ -180,7 +194,7 @@ def _gemini(prompt, system, model, json_mode, temperature, max_out, key=0):
         body["systemInstruction"] = {"parts": [{"text": system}]}
     if json_mode:
         body["generationConfig"]["responseMimeType"] = "application/json"
-    r = requests.post(GEMINI_URL.format(model=model), params={"key": _KEYS[key]}, json=body, timeout=int(os.getenv("LLM_TIMEOUT_S", "45")))
+    r = requests.post(GEMINI_URL.format(model=model), params={"key": _KEYS[key]}, json=body, timeout=LLM_TIMEOUT_S)
     if r.status_code == 429:
         return ("daily" if _is_daily_limit(r.text) else "rate_limited"), r
     if r.status_code != 200:
@@ -238,6 +252,10 @@ def generate(prompt: str, system: str | None = None, model: str | None = None, j
         t0 = time.time()
         try:
             status, out = call(prompt, system, model, json_mode, temperature, max_output_tokens, key)
+        except requests.Timeout as e:   # a hung request: retry at once on another key
+            last = e
+            POOL.stalled(key, (time.time() - t0) * 1000)
+            continue
         except requests.RequestException as e:
             last = e
             time.sleep(delay); delay *= 2; continue

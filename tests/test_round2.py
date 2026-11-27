@@ -172,3 +172,30 @@ def test_sleeping_workspace_is_woken_with_backoff(monkeypatch):
     t.http = Http()
     t.http.get = lambda url, timeout=30: Resp(200, "pong")
     assert t._req("GET", "https://ws/x").status_code == 200   # a dropped connection is retried after a wake-up
+
+
+def test_hung_request_is_retried_at_once_on_another_key(monkeypatch):
+    import requests
+    from agr import llm
+    pool = llm.KeyPool(3, rpm=0)
+    monkeypatch.setattr(llm, "POOL", pool)
+    used, slept = [], []
+    monkeypatch.setattr(llm.time, "sleep", lambda s: slept.append(s))
+
+    def fake(prompt, system, model, json_mode, temperature, max_out, key=0):
+        used.append(key)
+        if len(used) == 1:
+            raise requests.Timeout("hung")
+        return "ok", ("answer", 10, 2)
+
+    monkeypatch.setitem(llm.PROVIDERS, llm.SETTINGS.llm_provider, fake)
+    r = llm.generate("q")
+    assert r.text == "answer" and r.attempts == 2
+    assert used[0] != used[1]                # the retry went to another key
+    assert not slept                         # without a back-off sleep
+    assert pool.cool_until[used[0]] > 0      # the key that hung rests
+
+
+def test_default_llm_timeout_is_short():
+    from agr import llm
+    assert llm.LLM_TIMEOUT_S <= 25
