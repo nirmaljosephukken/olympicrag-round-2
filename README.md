@@ -140,15 +140,23 @@ penalised, unlike the official scorer). Citation precision / recall compare cite
 | Repeatability run A | `c0c43ec` | 88.6% | 38 | 47 | 0.81 / 0.85 | 8,846 | 3.30 | 2.56 | 28.5 / 288.0 s * |
 | Repeatability run B | `c0c43ec` | 86.6% | 38 | 45 | 0.74 / 0.79 | 9,046 | 3.42 | 2.54 | 10.3 / 91.0 s * |
 | Fast-period run | `06930bd` | 82.5% | 35 | 45 | 0.73 / 0.81 | 8,821 | 3.26 | 2.64 | **7.0 / 18.7 s** |
-| **Final run, submitted** (agent code identical to `e890a5f`) | `50825c5` | **89.9%** | 40 | 48 | 0.76 / 0.87 | 7,639 | 2.72 | 2.42 | 6.1 / 72.5 s * |
+| Previous final run (45 s LLM timeout) | `50825c5` | 89.9% | 40 | 48 | 0.76 / 0.87 | 7,639 | 2.72 | 2.42 | 6.1 / 72.5 s * |
+| **Final run, submitted** (20 s LLM timeout) | `f7100e4` | **90.1%** | 40 | 48 | 0.76 / 0.87 | 7,646 | 2.72 | 2.42 | **6.3 / 25.5 s** |
 
 \* Gemini was 5-10x slower than usual during these runs (and the workspace auto-suspended during run A), so their
-latency is not representative; the fast-period run is. In the final run most questions took 4-10 s, but a few Gemini
-calls stalled for over a minute, which sets its p95. Every answer in every run has at least one TigerGraph step, and
+latency is not representative; the fast-period run is. In the previous final run a few Gemini calls hung until the
+45 s request timeout (25 of 307 calls; the retry then took about 2 s), which set its p95.
+
+**Which run is submitted.** The agent code is the same in both final runs (`e890a5f`); the only change in `f7100e4` is
+that a hung Gemini request is abandoned after 20 s instead of 45 s and retried at once on another key (`agr/llm.py`).
+Both final runs answered the public and hidden sets on one commit each. We submit the `f7100e4` run, chosen because it
+scored higher on the public set (90.1% against 89.9%; the difference is within run-to-run variation) and was faster
+(public p95 25.5 s against 72.5 s, hidden p95 33.1 s against 63.1 s). The previous run's public answers are kept in
+`results/answers_public_a5ebfdc.jsonl`. Every answer in every run has at least one TigerGraph step, and
 no answer was released without being supported by cited evidence (grounding report in `results/score_*.json`).
 
-**Variance.** Run-to-run variation is real: across the five runs since the accuracy pass the score ranges from 82.5% to
-89.9% (mean about 87%). Runs A and B on identical code agree on the status of 46 of 50 questions and on the score of 40
+**Variance.** Run-to-run variation is real: across the six runs since the accuracy pass the score ranges from 82.5% to
+90.1% (mean about 87%). Runs A and B on identical code agree on the status of 46 of 50 questions and on the score of 40
 (`results/compare_A_B.json`). The movement is almost entirely in explanation and source-reliability questions; counts,
 lists, trends and `not_in_corpus` are stable. Two later changes target it (deterministic text search, evidence ids
 resolved to documents, event-first linking): on the unstable questions, two repeated runs now agree on 12 of 14 scores

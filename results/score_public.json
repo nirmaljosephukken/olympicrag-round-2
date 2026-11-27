@@ -2,7 +2,7 @@
  "summary": {
   "questions": 50,
   "answered_files": 50,
-  "accuracy_pct": 89.9,
+  "accuracy_pct": 90.1,
   "full_credit": 40,
   "status_matches": 48,
   "method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
@@ -13,7 +13,7 @@
    "supported by cited evidence": 44,
    "not_in_corpus": 6
   },
-  "tokens_per_correct_answer": 8501,
+  "tokens_per_correct_answer": 8487,
   "accuracy_by_style": {
    "count / comparison": {
     "questions": 10,
@@ -24,7 +24,7 @@
    },
    "explanation": {
     "questions": 12,
-    "accuracy_pct": 71.6,
+    "accuracy_pct": 72.6,
     "failing": [
      "r2-pub-022",
      "r2-pub-039",
@@ -205,7 +205,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 15318
+   "tokens": 15395
   },
   {
    "qid": "r2-pub-005",
@@ -549,7 +549,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 7977
+   "tokens": 7979
   },
   {
    "qid": "r2-pub-013",
@@ -592,7 +592,7 @@
    "citation_precision": 0.778,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5332
+   "tokens": 5335
   },
   {
    "qid": "r2-pub-014",
@@ -689,7 +689,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 5108
+   "tokens": 5038
   },
   {
    "qid": "r2-pub-017",
@@ -773,7 +773,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 13075
+   "tokens": 13070
   },
   {
    "qid": "r2-pub-021",
@@ -895,7 +895,7 @@
    "citation_precision": 0.333,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4856
+   "tokens": 4858
   },
   {
    "qid": "r2-pub-027",
@@ -918,7 +918,7 @@
    "citation_precision": 0.5,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4727
+   "tokens": 4769
   },
   {
    "qid": "r2-pub-028",
@@ -932,7 +932,7 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 19748
+   "tokens": 20039
   },
   {
    "qid": "r2-pub-029",
@@ -1000,7 +1000,7 @@
    "citation_precision": null,
    "citation_recall": null,
    "grounding": "not_in_corpus",
-   "tokens": 12038
+   "tokens": 12031
   },
   {
    "qid": "r2-pub-032",
@@ -1077,7 +1077,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "supported by cited evidence",
-   "tokens": 4780
+   "tokens": 4778
   },
   {
    "qid": "r2-pub-035",
@@ -1316,7 +1316,7 @@
    "citation_precision": 1.0,
    "citation_recall": 1.0,
    "grounding": "not_in_corpus",
-   "tokens": 9031
+   "tokens": 9138
   },
   {
    "qid": "r2-pub-047",
@@ -1358,26 +1358,26 @@
    "citation_precision": 1.0,
    "citation_recall": 0.333,
    "grounding": "not_in_corpus",
-   "tokens": 9325
+   "tokens": 9217
   },
   {
    "qid": "r2-pub-050",
    "style": "explanation",
    "gold_status": "answered",
    "status": "answered",
-   "score": 0.238,
+   "score": 0.357,
    "facts": [
     [
      "text",
-     0.24
+     0.36
     ]
    ],
    "why": "",
-   "deterministic": 0.238,
+   "deterministic": 0.357,
    "citation_precision": 1.0,
    "citation_recall": 0.333,
    "grounding": "supported by cited evidence",
-   "tokens": 8231
+   "tokens": 8267
   }
  ]
 }

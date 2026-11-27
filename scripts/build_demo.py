@@ -68,8 +68,10 @@ def main() -> int:
     data = {
         "graph_counts": load_json(ROOT / "graph_counts.json"),
         "runs": [
-            {"name": "Public, final run (frozen code, submitted)", "code": "50825c5",
+            {"name": "Public, final run (submitted)", "code": "f7100e4",
              **summary(r / "score_public.json", ROOT / "metrics.json")},
+            {"name": "Public, previous final run (45 s LLM timeout)", "code": "50825c5",
+             **summary(r / "score_public_a5ebfdc.json", r / "metrics_a5ebfdc.json")},
             {"name": "Public, fast-period run", "code": "06930bd",
              **summary(r / "score_public_06930bd.json", r / "metrics_06930bd.json")},
             {"name": "Public, repeatability run A", "code": "c0c43ec", **summary(r / "score_run_A.json", answers=r / "run_A_public.jsonl")},

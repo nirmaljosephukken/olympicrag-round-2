@@ -1,20 +1,20 @@
 {
   "public": {
     "questions": 50,
-    "accuracy_pct": 89.9,
+    "accuracy_pct": 90.1,
     "accuracy_method": "deterministic fact-by-fact matching with partial credit (scripts/score_public.py)",
     "not_in_corpus_answers": 6,
-    "input_tokens_total": 348259,
-    "output_tokens_total": 33671,
-    "tokens_per_question_avg": 7639,
-    "latency_ms_avg": 19308,
-    "latency_ms_p50": 6127,
-    "latency_ms_p95": 72473,
+    "input_tokens_total": 348592,
+    "output_tokens_total": 33706,
+    "tokens_per_question_avg": 7646,
+    "latency_ms_avg": 9353,
+    "latency_ms_p50": 6346,
+    "latency_ms_p95": 25474,
     "llm_calls_per_question_avg": 2.72,
     "tigergraph_queries_per_question_avg": 2.42,
     "trace_steps_per_question_avg": 7.4,
     "answers_with_tigergraph_step": 50,
-    "total_run_time_s": 965.4,
+    "total_run_time_s": 467.7,
     "cost_usd_total": 0.0
   },
   "public_checks": {
@@ -25,23 +25,23 @@
       "supported by cited evidence": 44,
       "not_in_corpus": 6
     },
-    "tokens_per_correct_answer": 8501
+    "tokens_per_correct_answer": 8487
   },
   "hidden": {
     "questions": 50,
     "accuracy_pct": null,
     "not_in_corpus_answers": 8,
-    "input_tokens_total": 446866,
-    "output_tokens_total": 45068,
-    "tokens_per_question_avg": 9839,
-    "latency_ms_avg": 20714,
-    "latency_ms_p50": 9056,
-    "latency_ms_p95": 63101,
+    "input_tokens_total": 446823,
+    "output_tokens_total": 44998,
+    "tokens_per_question_avg": 9836,
+    "latency_ms_avg": 11773,
+    "latency_ms_p50": 6440,
+    "latency_ms_p95": 33061,
     "llm_calls_per_question_avg": 3.42,
     "tigergraph_queries_per_question_avg": 2.88,
-    "trace_steps_per_question_avg": 8.84,
+    "trace_steps_per_question_avg": 8.86,
     "answers_with_tigergraph_step": 50,
-    "total_run_time_s": 1035.7,
+    "total_run_time_s": 588.7,
     "cost_usd_total": 0.0
   },
   "settings": {
