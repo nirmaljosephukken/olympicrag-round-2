@@ -92,7 +92,9 @@ def main() -> int:
         "answers": answers_with_gold(ROOT / "answers_public.jsonl", ROOT / "data/questions/questions_public.jsonl",
                                      r / "score_public.json", "public")
         + answers_with_gold(r / "heldout_e890a5f.jsonl", ROOT / "data/questions/questions_heldout.jsonl",
-                            r / "score_heldout_e890a5f.json", "held-out"),
+                            r / "score_heldout_e890a5f.json", "held-out")
+        + answers_with_gold(ROOT / "answers_hidden.jsonl", ROOT / "data/questions/questions_hidden.jsonl",
+                            r / "no_score_for_hidden.json", "hidden"),   # no answer key: unscored
     }
     out = ROOT / "docs" / "data.json"
     out.parent.mkdir(parents=True, exist_ok=True)

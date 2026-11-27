@@ -217,7 +217,7 @@
   <h2>Every recorded answer, with its reasoning</h2>
   <p class="sec-sub">Pick a question. The timeline shows each step in order, sized by its time: <span style="color:var(--series-1)">■</span> LLM decisions, <span style="color:var(--tg)">■</span> TigerGraph queries, <span style="color:var(--code)">■</span> code steps.</p>
   <div class="two">
-    <div class="card"><div style="display:flex;gap:8px"><select id="set" style="flex:0 0 150px"><option value="public">Public (50)</option><option value="held-out">Held-out</option></select><input type="search" id="filter" placeholder="Filter ..."></div>
+    <div class="card"><div style="display:flex;gap:8px"><select id="set" style="flex:0 0 150px"><option value="public">Public (50)</option><option value="held-out">Held-out</option><option value="hidden">Hidden</option></select><input type="search" id="filter" placeholder="Filter ..."></div>
       <div class="list" id="qlist"></div></div>
     <div id="qview" class="card"><p class="muted">Pick a question on the left.</p></div>
   </div>
@@ -364,7 +364,7 @@ function kpis() {
     [(avg / Math.max(gr.accuracy_pct || 1, rag.accuracy_pct || 1)).toFixed(1) + "×", `the accuracy of one-call baselines (GraphRAG ${pct(gr.accuracy_pct)}, RAG ${pct(rag.accuracy_pct)})`]];
   $("#hoNote").textContent = DATA.heldout_note || "";
   const cnt = s => DATA.answers.filter(a => a.set === s).length;
-  $("#set").options[0].text = `Public (${cnt("public")})`; $("#set").options[1].text = `Held-out (${cnt("held-out")})`;
+  $("#set").options[0].text = `Public (${cnt("public")})`; $("#set").options[1].text = `Held-out (${cnt("held-out")})`; $("#set").options[2].text = `Hidden (${cnt("hidden")})`;
   $("#kpis").innerHTML = items.map(([b, s]) => `<div class="kpi"><b>${b}</b><span>${esc(s)}</span></div>`).join("");
 }
 
@@ -497,7 +497,8 @@ function explore() {
   document.querySelectorAll(".qi").forEach(d => d.onclick = ev => {
     document.querySelectorAll(".qi").forEach(x => x.classList.toggle("on", x === d));
     const a = DATA.answers[+d.dataset.i]; const v = $("#qview"); v.innerHTML = "";
-    v.appendChild(answerView(a, {status: a.gold_status, answer: a.gold_answer, docs: a.gold_docs}, `<div class="eyebrow">${esc(a.set)} · ${esc(a.qid)}</div><h2 style="margin-top:4px">${esc(a.question)}</h2>`));
+    v.appendChild(answerView(a, a.gold_status ? {status: a.gold_status, answer: a.gold_answer, docs: a.gold_docs} : null, `<div class="eyebrow">${esc(a.set === "hidden" ? "hidden set, scored by organisers" : a.set)} · ${esc(a.qid)}</div><h2 style="margin-top:4px">${esc(a.question)}</h2>`));
+    if (a.set === "hidden") v.insertAdjacentHTML("beforeend", `<p class="small muted">Hidden set: the organisers hold the answer key and score these answers; this is the submitted answer and its trace, unscored.</p>`);
     if (ev && ev.isTrusted && innerWidth < 900) v.scrollIntoView({behavior: "smooth"});   // phone: the answer sits below the list
   });
   document.querySelectorAll(".qi").forEach(d => d.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); d.click(); } });
