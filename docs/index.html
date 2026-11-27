@@ -49,6 +49,12 @@
   .pstep .ph { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; font-size:13.5px; }
   .pstep .ph b { font-weight:650; } .pstep .ph .k { font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--c); }
   .pstep .pd { font-size:12.5px; color:var(--text-secondary); margin-top:2px; word-break:break-word; }
+  .pstep .sn { font:600 11.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--text-muted); min-width:24px; }
+  .pstep .fl { font:11.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--text-muted); margin-top:2px; }
+  .pstep .fl .fi { white-space:nowrap; } .pstep .fl .fi.w { white-space:normal; overflow-wrap:anywhere; }
+  .pstep .fl b { color:var(--text-secondary); font-weight:600; }
+  details.raw { margin-top:12px; } details.raw summary { cursor:pointer; color:var(--accent); font-size:13px; }
+  details.raw pre { max-height:420px; overflow:auto; font-size:11.5px; }
   .pbar { height:5px; border-radius:3px; background:var(--c); margin-top:5px; opacity:.85; min-width:3px; }
   .final { border:2px solid var(--series-1); border-radius:12px; padding:12px 14px; margin-top:6px; background:var(--surface-2); }
   .why { font-size:13px; color:var(--text-secondary); margin-top:8px; }
@@ -444,9 +450,15 @@ const KN = {tg: "TIGERGRAPH", llm: "LLM", code: "CODE", check: "CHECK PASSED", r
 function reasoningPath(a) {
   const tr = a.trace || [], max = Math.max(...tr.map(s => s.ms || 0), 1);
   const steps = tr.map(s => { const k = kindOf(s); const title = s.tigergraph ? esc(s.query) : (k === "llm" ? esc((s.decision || "").replace("decide:", "decide → ") || s.tool) : esc(s.tool));
-    const det = s.tigergraph ? `${esc(JSON.stringify(s.params)).slice(0, 200)} → <b>${fmt(s.rows)}</b> rows` : (k === "llm" ? `${fmt(s.input_tokens)} tokens in · ${fmt(s.output_tokens)} out` : (k === "check" ? "every name and number stated in the cited evidence" : (k === "reject" ? "answer sent back with the reason" : "")));
-    return `<div class="pstep" style="--c:${KC(k)}"><div class="ph"><span class="k">${KN[k]}</span><b>${title}</b><span class="muted small">${fmt(Math.round(s.ms || 0))} ms</span></div>
-      ${det ? `<div class="pd">${det}</div>` : ""}<div class="pbar" style="width:${Math.max(1, 100 * (s.ms || 0) / max)}%"></div></div>`; }).join("");
+    const det = s.tigergraph ? `${esc(JSON.stringify(s.params))} → <b>${fmt(s.rows)}</b> rows` : (k === "llm" ? `${fmt(s.input_tokens)} tokens in · ${fmt(s.output_tokens)} out` : (k === "check" ? "every name and number stated in the cited evidence" : (k === "reject" ? "answer sent back with the reason" : "")));
+    const f = [`<b>step</b> ${esc(s.step)}`, `<b>tool</b> ${esc(s.tool)}`, `<b>tigergraph</b> ${s.tigergraph ? "true" : "false"}`];
+    if (s.tigergraph) f.push(`<b>query</b> ${esc(s.query)}`, `<b>rows</b> ${esc(s.rows)}`);
+    if (s.input_tokens != null) f.push(`<b>input_tokens</b> ${esc(s.input_tokens)}`, `<b>output_tokens</b> ${esc(s.output_tokens)}`);
+    f.push(`<b>ms</b> ${esc(s.ms)}`);
+    if (s.ts) f.push(`<b>ts</b> ${esc(s.ts)}`);
+    if (s.via) f.push(`<b>via</b> ${esc(s.via)}`);
+    return `<div class="pstep" style="--c:${KC(k)}"><div class="ph"><span class="sn">#${esc(s.step)}</span><span class="k">${KN[k]}</span><b>${title}</b><span class="muted small">${fmt(Math.round(s.ms || 0))} ms</span></div>
+      ${det ? `<div class="pd">${det}</div>` : ""}<div class="fl">${f.map(x => `<span class="fi">${x}</span>`).join(" · ")}</div><div class="pbar" style="width:${Math.max(1, 100 * (s.ms || 0) / max)}%"></div></div>`; }).join("");
   const why = a.status === "answered" ? "Every fact the question asks for is stated in the cited evidence." :
     (a.status === "partial" ? "Some asked facts are stated; missing: " + (a.missing || []).map(esc).join("; ") :
       "None of the asked facts is stated in the corpus" + ((a.missing || []).length ? ": " + a.missing.map(esc).join("; ") : "") + ".");
@@ -465,7 +477,7 @@ function timeline(trace) {
   return svg;
 }
 function stepText(s) {
-  if (s.tigergraph) return `TigerGraph <b>${esc(s.query)}</b> ${esc(JSON.stringify(s.params)).slice(0, 220)} → ${fmt(s.rows)} rows`;
+  if (s.tigergraph) return `TigerGraph <b>${esc(s.query)}</b> ${esc(JSON.stringify(s.params)).slice(0, 220)} → ${fmt(s.rows)} rows`;   // tooltip: short
   if (s.input_tokens != null) return `LLM ${esc(s.decision || "")} · ${fmt(s.input_tokens)} in / ${fmt(s.output_tokens)} out tokens`;
   if (s.tool === "evidence_evaluator") return s.ok ? "grounding check passed" : "grounding check rejected the answer";
   return "code step";
@@ -480,6 +492,7 @@ function answerView(a, gold, title) {
     <h3>Reasoning path</h3><div id="tl"></div>
     <div class="legend"><span><i style="background:var(--series-1)"></i>LLM</span><span><i style="background:var(--tg)"></i>TigerGraph query</span><span><i style="background:var(--code)"></i>code</span><span><i style="background:var(--check)"></i>check passed</span><span><i style="background:var(--reject)"></i>rejected</span><span class="muted">bar length = time</span></div>
     ${reasoningPath(a)}
+    <details class="raw"><summary>Raw trace (JSON, exactly as submitted)</summary><pre>${esc(JSON.stringify(tr, null, 1))}</pre></details>
     <h3>Explanation</h3><p class="sec small">${esc(a.explanation)}</p>
     <h3>Citations</h3><p class="small">${(a.citations || []).map(c => `<code>${esc(c)}</code>`).join(" ") || "–"}</p>
     ${(a.citation_snippets || []).map(c => `<pre><b>${esc(c.title)}</b> · ${esc(c.doc_id)}\n${esc(c.text)}</pre>`).join("")}
